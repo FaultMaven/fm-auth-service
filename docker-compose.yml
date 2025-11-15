@@ -1,13 +1,48 @@
 version: '3.8'
 
 services:
-  auth_service-service:
-    build: .
+  postgres:
+    image: postgres:15-alpine
+    container_name: fm-auth-postgres
+    environment:
+      POSTGRES_DB: fm_auth
+      POSTGRES_USER: fm_auth
+      POSTGRES_PASSWORD: fm_auth_dev_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fm_auth"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: fm-auth-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  auth-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: fm-auth-service
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=postgresql://postgres:password@postgres:5432/fm_auth
-      - REDIS_URL=redis://redis:6379/0
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - DATABASE_URL=postgresql+asyncpg://fm_auth:fm_auth_dev_password@postgres:5432/fm_auth
       - LOG_LEVEL=INFO
       - ENVIRONMENT=development
     depends_on:
@@ -15,39 +50,9 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 3s
-      retries: 3
-
-  postgres:
-    image: postgres:15-alpine
-    environment:
-      POSTGRES_DB: fm_auth
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
-    ports:
-      - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 3s
-      retries: 5
+      - ./src:/app/src
+    command: uvicorn auth_service.main:app --host 0.0.0.0 --port 8000 --reload
 
 volumes:
   postgres_data:

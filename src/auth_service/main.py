@@ -1,12 +1,19 @@
-"""
-FaultMaven Auth Service Microservice
+"""FaultMaven Auth Service
 
-FaultMaven Authentication and User Management Microservice
+Main FastAPI application entry point.
+Extracted from FaultMaven monolith - Phase 1 microservice.
 """
+
+import logging
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-import logging
+from fastapi.responses import JSONResponse
+
+from auth_service.config.settings import get_settings
+from auth_service.api.routes import auth
+from auth_service.infrastructure.redis.client import get_redis_client, close_redis_client
 
 # Configure logging
 logging.basicConfig(
@@ -15,43 +22,99 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Application lifespan events"""
+    settings = get_settings()
+
+    # Startup
+    logger.info(f"Starting {settings.service_name} v{settings.service_version}")
+    logger.info(f"Environment: {settings.environment}")
+
+    # Initialize Redis
+    try:
+        redis_client = await get_redis_client()
+        logger.info("Redis connection established")
+    except Exception as e:
+        logger.error(f"Failed to connect to Redis: {e}")
+        raise
+
+    yield
+
+    # Shutdown
+    logger.info("Shutting down Auth Service")
+    await close_redis_client()
+    logger.info("Redis connection closed")
+
+
 # Create FastAPI application
+settings = get_settings()
 app = FastAPI(
-    title="Auth Service Service",
-    description="FaultMaven Authentication and User Management Microservice",
-    version="0.1.0"
+    title="FaultMaven Auth Service",
+    version=settings.service_version,
+    description="Authentication and user management service extracted from FaultMaven monolith",
+    lifespan=lifespan
 )
 
-# Configure CORS
+# CORS configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=settings.cors_origins,
+    allow_credentials=settings.cors_allow_credentials,
+    allow_methods=settings.cors_allow_methods,
+    allow_headers=settings.cors_allow_headers,
 )
 
 
+# Health check endpoint
 @app.get("/health")
-async def health_check():
-    """Health check endpoint."""
+async def root_health_check():
+    """Root health check endpoint"""
     return {
         "status": "healthy",
-        "service": "Auth Service",
-        "version": "0.1.0"
+        "service": settings.service_name,
+        "version": settings.service_version,
+        "environment": settings.environment
     }
 
 
 @app.get("/")
 async def root():
-    """Root endpoint."""
+    """Root endpoint with service information"""
     return {
-        "service": "Auth Service Service",
-        "version": "0.1.0",
-        "description": "FaultMaven Authentication and User Management Microservice"
+        "service": settings.service_name,
+        "version": settings.service_version,
+        "description": "FaultMaven Authentication Service",
+        "docs": "/docs",
+        "health": "/health"
     }
+
+
+# Include routers
+app.include_router(auth.router, prefix="/api/v1", tags=["authentication"])
+
+
+# Global exception handler
+@app.exception_handler(Exception)
+async def global_exception_handler(request, exc):
+    """Global exception handler for unhandled errors"""
+    logger.error(f"Unhandled exception: {exc}", exc_info=True)
+    return JSONResponse(
+        status_code=500,
+        content={
+            "error": "internal_server_error",
+            "message": "An unexpected error occurred. Please try again later."
+        }
+    )
 
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(
+        "auth_service.main:app",
+        host=settings.host,
+        port=settings.port,
+        reload=settings.debug,
+        log_level=settings.log_level.lower()
+    )
