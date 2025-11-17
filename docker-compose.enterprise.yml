@@ -27,7 +27,7 @@ services:
     image: redis:7-alpine
     container_name: fm-auth-redis
     ports:
-      - "6379:6379"
+      - "6380:6379"  # Using 6380 to avoid conflict with existing Redis
     volumes:
       - redis_data:/data
     healthcheck:
@@ -43,7 +43,7 @@ services:
     image: ghcr.io/faultmaven/fm-auth-service-enterprise:latest
     container_name: fm-auth-enterprise
     ports:
-      - "8001:8001"
+      - "8101:8001"  # Using 8101 to avoid conflict
     environment:
       # Database
       DATABASE_URL: postgresql://faultmaven:dev_password_change_in_production@postgres:5432/faultmaven_enterprise
@@ -87,7 +87,7 @@ services:
         alembic upgrade head &&
         echo 'Starting FaultMaven Auth Service - Enterprise Edition...' &&
         cd /app &&
-        python -m uvicorn auth_service.main:app --host 0.0.0.0 --port 8001
+        python -m uvicorn enterprise.main:app --host 0.0.0.0 --port 8001
       "
 
   # pgAdmin (optional - for database management)
