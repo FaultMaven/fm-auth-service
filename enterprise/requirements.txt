@@ -1,0 +1,27 @@
+# Enterprise dependencies for fm-auth-service
+# Installed on top of PUBLIC foundation
+
+# PostgreSQL support
+psycopg2-binary>=2.9.9
+sqlalchemy-utils>=0.41.1
+
+# Database migrations
+alembic>=1.13.0
+
+# SSO/SAML support
+python3-saml>=1.16.0
+xmlsec>=1.3.13
+
+# Multi-tenancy
+# tenant-schemas-postgresql>=0.11.0
+
+# Enhanced security
+python-jose[cryptography]>=3.3.0
+
+# Monitoring
+sentry-sdk[fastapi]>=1.39.0
+
+# Additional enterprise features
+python-multipart>=0.0.6
+emails>=0.6.0
+jinja2>=3.1.2
