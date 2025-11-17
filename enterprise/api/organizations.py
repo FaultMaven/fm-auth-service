@@ -12,7 +12,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from pydantic import BaseModel, Field
 
-from enterprise.models import Organization
+from enterprise.models import Organization, EnterpriseUser
+from enterprise.middleware.auth import (
+    get_current_active_user,
+    require_permissions,
+    require_org_admin,
+    require_org_access
+)
 
 router = APIRouter(prefix="/api/v1/enterprise/organizations", tags=["organizations"])
 
@@ -63,16 +69,19 @@ from enterprise.database import get_db
 @router.post("", response_model=OrganizationResponse, status_code=status.HTTP_201_CREATED)
 async def create_organization(
     organization: OrganizationCreate,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: EnterpriseUser = Depends(require_permissions("organizations:create"))
 ):
     """
     Create a new organization.
 
     Creates a new tenant organization in the multi-tenant SaaS.
+    Requires 'organizations:create' permission.
 
     Args:
         organization: Organization data
         db: Database session
+        current_user: Authenticated user with required permissions
 
     Returns:
         Created organization
@@ -106,23 +115,30 @@ async def list_organizations(
     skip: int = 0,
     limit: int = 100,
     is_active: Optional[bool] = None,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: EnterpriseUser = Depends(get_current_active_user)
 ):
     """
     List organizations.
 
-    Returns paginated list of organizations with optional filtering.
+    Returns the user's organization (multi-tenant isolation).
+    Regular users can only see their own organization.
 
     Args:
         skip: Number of records to skip (pagination)
         limit: Maximum number of records to return
         is_active: Filter by active status
         db: Database session
+        current_user: Authenticated active user
 
     Returns:
-        List of organizations
+        List containing user's organization
     """
-    query = select(Organization).where(Organization.deleted_at.is_(None))
+    # Multi-tenant isolation: only return user's organization
+    query = select(Organization).where(
+        Organization.id == current_user.organization_id,
+        Organization.deleted_at.is_(None)
+    )
 
     if is_active is not None:
         query = query.where(Organization.is_active == is_active)
@@ -137,20 +153,24 @@ async def list_organizations(
 @router.get("/{organization_id}", response_model=OrganizationResponse)
 async def get_organization(
     organization_id: UUID,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: EnterpriseUser = Depends(require_org_access)
 ):
     """
     Get organization by ID.
 
+    Requires user to belong to the organization (multi-tenant access control).
+
     Args:
         organization_id: Organization UUID
         db: Database session
+        current_user: Authenticated user with organization access
 
     Returns:
         Organization details
 
     Raises:
-        HTTPException: If organization not found
+        HTTPException: If organization not found or access denied
     """
     result = await db.execute(
         select(Organization).where(
@@ -173,22 +193,33 @@ async def get_organization(
 async def update_organization(
     organization_id: UUID,
     organization_update: OrganizationUpdate,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: EnterpriseUser = Depends(require_org_admin)
 ):
     """
     Update organization.
+
+    Requires organization admin role.
 
     Args:
         organization_id: Organization UUID
         organization_update: Fields to update
         db: Database session
+        current_user: Authenticated user with admin role
 
     Returns:
         Updated organization
 
     Raises:
-        HTTPException: If organization not found
+        HTTPException: If organization not found or user is not admin
     """
+    # Verify the organization belongs to the user (multi-tenant isolation)
+    if current_user.organization_id != organization_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied: You do not belong to this organization"
+        )
+
     result = await db.execute(
         select(Organization).where(
             Organization.id == organization_id,
@@ -217,20 +248,30 @@ async def update_organization(
 @router.delete("/{organization_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_organization(
     organization_id: UUID,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: EnterpriseUser = Depends(require_org_admin)
 ):
     """
     Soft delete organization.
 
     Marks organization as deleted without actually removing from database.
+    Requires organization admin role.
 
     Args:
         organization_id: Organization UUID
         db: Database session
+        current_user: Authenticated user with admin role
 
     Raises:
-        HTTPException: If organization not found
+        HTTPException: If organization not found or user is not admin
     """
+    # Verify the organization belongs to the user (multi-tenant isolation)
+    if current_user.organization_id != organization_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied: You do not belong to this organization"
+        )
+
     result = await db.execute(
         select(Organization).where(
             Organization.id == organization_id,

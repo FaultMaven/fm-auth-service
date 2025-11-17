@@ -12,7 +12,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from pydantic import BaseModel, Field
 
-from enterprise.models import Team, Organization
+from enterprise.models import Team, Organization, EnterpriseUser
+from enterprise.middleware.auth import (
+    get_current_active_user,
+    require_permissions,
+    require_org_admin,
+    require_org_access
+)
 
 router = APIRouter(prefix="/api/v1/enterprise/teams", tags=["teams"])
 
@@ -52,21 +58,32 @@ from enterprise.database import get_db
 @router.post("", response_model=TeamResponse, status_code=status.HTTP_201_CREATED)
 async def create_team(
     team: TeamCreate,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: EnterpriseUser = Depends(require_permissions("teams:create"))
 ):
     """
     Create a new team within an organization.
 
+    Requires 'teams:create' permission and user must belong to the organization.
+
     Args:
         team: Team data
         db: Database session
+        current_user: Authenticated user with required permissions
 
     Returns:
         Created team
 
     Raises:
-        HTTPException: If organization not found or slug already exists
+        HTTPException: If organization not found, access denied, or slug already exists
     """
+    # Multi-tenant isolation: verify user belongs to the organization
+    if current_user.organization_id != team.organization_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied: You do not belong to this organization"
+        )
+
     # Verify organization exists
     org_result = await db.execute(
         select(Organization).where(
@@ -127,16 +144,20 @@ async def list_organization_teams(
     organization_id: UUID,
     skip: int = 0,
     limit: int = 100,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: EnterpriseUser = Depends(require_org_access)
 ):
     """
     List teams for an organization.
+
+    Requires user to belong to the organization (multi-tenant isolation).
 
     Args:
         organization_id: Organization UUID
         skip: Number of records to skip
         limit: Maximum number of records to return
         db: Database session
+        current_user: Authenticated user with organization access
 
     Returns:
         List of teams
@@ -155,20 +176,24 @@ async def list_organization_teams(
 @router.get("/{team_id}", response_model=TeamResponse)
 async def get_team(
     team_id: UUID,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: EnterpriseUser = Depends(get_current_active_user)
 ):
     """
     Get team by ID.
 
+    Requires user to belong to the team's organization (multi-tenant isolation).
+
     Args:
         team_id: Team UUID
         db: Database session
+        current_user: Authenticated active user
 
     Returns:
         Team details
 
     Raises:
-        HTTPException: If team not found
+        HTTPException: If team not found or access denied
     """
     result = await db.execute(
         select(Team).where(
@@ -182,6 +207,13 @@ async def get_team(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Team {team_id} not found"
+        )
+
+    # Multi-tenant isolation: verify user belongs to the team's organization
+    if current_user.organization_id != team.organization_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied: You do not belong to this team's organization"
         )
 
     return team
@@ -191,21 +223,25 @@ async def get_team(
 async def update_team(
     team_id: UUID,
     team_update: TeamUpdate,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: EnterpriseUser = Depends(require_permissions("teams:update"))
 ):
     """
     Update team.
+
+    Requires 'teams:update' permission and user must belong to the team's organization.
 
     Args:
         team_id: Team UUID
         team_update: Fields to update
         db: Database session
+        current_user: Authenticated user with required permissions
 
     Returns:
         Updated team
 
     Raises:
-        HTTPException: If team not found or slug conflict
+        HTTPException: If team not found, access denied, or slug conflict
     """
     result = await db.execute(
         select(Team).where(
@@ -219,6 +255,13 @@ async def update_team(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Team {team_id} not found"
+        )
+
+    # Multi-tenant isolation: verify user belongs to the team's organization
+    if current_user.organization_id != team.organization_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied: You do not belong to this team's organization"
         )
 
     # Check slug uniqueness if being updated
@@ -253,17 +296,21 @@ async def update_team(
 @router.delete("/{team_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_team(
     team_id: UUID,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: EnterpriseUser = Depends(require_permissions("teams:delete"))
 ):
     """
     Soft delete team.
 
+    Requires 'teams:delete' permission and user must belong to the team's organization.
+
     Args:
         team_id: Team UUID
         db: Database session
+        current_user: Authenticated user with required permissions
 
     Raises:
-        HTTPException: If team not found
+        HTTPException: If team not found or access denied
     """
     result = await db.execute(
         select(Team).where(
@@ -277,6 +324,13 @@ async def delete_team(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Team {team_id} not found"
+        )
+
+    # Multi-tenant isolation: verify user belongs to the team's organization
+    if current_user.organization_id != team.organization_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied: You do not belong to this team's organization"
         )
 
     team.soft_delete()
