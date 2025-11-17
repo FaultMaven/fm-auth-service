@@ -56,14 +56,8 @@ class OrganizationResponse(BaseModel):
         from_attributes = True
 
 
-# Dependency for database session (placeholder - will be implemented with actual DB setup)
-async def get_db() -> AsyncSession:
-    """
-    Get database session.
-
-    TODO: Implement actual database session management with connection pooling.
-    """
-    raise NotImplementedError("Database session not configured")
+# Import database session dependency
+from enterprise.database import get_db
 
 
 @router.post("", response_model=OrganizationResponse, status_code=status.HTTP_201_CREATED)

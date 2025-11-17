@@ -45,10 +45,8 @@ class TeamResponse(BaseModel):
         from_attributes = True
 
 
-# Dependency placeholder
-async def get_db() -> AsyncSession:
-    """Get database session."""
-    raise NotImplementedError("Database session not configured")
+# Import database session dependency
+from enterprise.database import get_db
 
 
 @router.post("", response_model=TeamResponse, status_code=status.HTTP_201_CREATED)

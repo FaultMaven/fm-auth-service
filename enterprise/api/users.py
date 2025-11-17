@@ -13,6 +13,7 @@ from sqlalchemy import select
 from pydantic import BaseModel, EmailStr, Field
 
 from enterprise.models import EnterpriseUser, Organization, Team
+from enterprise.security import hash_password
 
 router = APIRouter(prefix="/api/v1/enterprise/users", tags=["users"])
 
@@ -49,10 +50,8 @@ class UserResponse(BaseModel):
         from_attributes = True
 
 
-# Dependency placeholder
-async def get_db() -> AsyncSession:
-    """Get database session."""
-    raise NotImplementedError("Database session not configured")
+# Import database session dependency
+from enterprise.database import get_db
 
 
 @router.post("", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
@@ -138,10 +137,9 @@ async def create_user(
     # Create user
     user_data = user.model_dump(exclude={"password"})
 
-    # Hash password if provided (placeholder - actual hashing needed)
+    # Hash password if provided
     if user.password:
-        # TODO: Implement proper password hashing with bcrypt
-        user_data["hashed_password"] = f"hashed_{user.password}"
+        user_data["hashed_password"] = hash_password(user.password)
 
     db_user = EnterpriseUser(**user_data)
     db.add(db_user)

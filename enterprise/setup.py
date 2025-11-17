@@ -17,6 +17,7 @@ setup(
     install_requires=[
         # PostgreSQL support
         "psycopg2-binary>=2.9.9",
+        "asyncpg>=0.29.0",
         "sqlalchemy-utils>=0.41.1",
 
         # Database migrations
@@ -30,6 +31,7 @@ setup(
 
         # Additional security
         "python-jose[cryptography]>=3.3.0",
+        "bcrypt>=4.1.0",
 
         # Monitoring and observability
         "sentry-sdk[fastapi]>=1.39.0",
