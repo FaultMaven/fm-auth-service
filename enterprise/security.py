@@ -1,10 +1,20 @@
 """
 Security utilities for enterprise authentication.
 
-Provides password hashing and verification using bcrypt.
+Provides password hashing and verification using bcrypt, and JWT token generation.
 """
 
+from datetime import datetime, timedelta
+from typing import Optional
+from uuid import UUID
+
 import bcrypt
+from jose import jwt
+
+from enterprise.config.settings import get_settings
+
+
+settings = get_settings()
 
 
 def hash_password(password: str) -> str:
@@ -41,3 +51,112 @@ def verify_password(password: str, hashed_password: str) -> bool:
         )
     except Exception:
         return False
+
+
+def create_access_token(
+    user_id: UUID,
+    organization_id: UUID,
+    email: str,
+    expires_delta: Optional[timedelta] = None
+) -> str:
+    """
+    Create a JWT access token.
+
+    Args:
+        user_id: User UUID
+        organization_id: Organization UUID
+        email: User email
+        expires_delta: Optional custom expiration time
+
+    Returns:
+        Encoded JWT token string
+    """
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta
+    else:
+        expire = datetime.utcnow() + timedelta(
+            minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
+        )
+
+    to_encode = {
+        "sub": str(user_id),  # Subject (user ID)
+        "email": email,
+        "org_id": str(organization_id),
+        "exp": expire,  # Expiration time
+        "iat": datetime.utcnow(),  # Issued at
+        "type": "access"
+    }
+
+    encoded_jwt = jwt.encode(
+        to_encode,
+        settings.JWT_SECRET_KEY,
+        algorithm=settings.JWT_ALGORITHM
+    )
+    return encoded_jwt
+
+
+def create_refresh_token(
+    user_id: UUID,
+    expires_delta: Optional[timedelta] = None
+) -> str:
+    """
+    Create a JWT refresh token.
+
+    Refresh tokens have longer expiration and fewer claims.
+    Used to obtain new access tokens without re-authentication.
+
+    Args:
+        user_id: User UUID
+        expires_delta: Optional custom expiration time
+
+    Returns:
+        Encoded JWT token string
+    """
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta
+    else:
+        expire = datetime.utcnow() + timedelta(
+            days=settings.REFRESH_TOKEN_EXPIRE_DAYS
+        )
+
+    to_encode = {
+        "sub": str(user_id),
+        "exp": expire,
+        "iat": datetime.utcnow(),
+        "type": "refresh"
+    }
+
+    encoded_jwt = jwt.encode(
+        to_encode,
+        settings.JWT_SECRET_KEY,
+        algorithm=settings.JWT_ALGORITHM
+    )
+    return encoded_jwt
+
+
+def verify_token(token: str, token_type: str = "access") -> dict:
+    """
+    Verify and decode a JWT token.
+
+    Args:
+        token: JWT token string
+        token_type: Expected token type ("access" or "refresh")
+
+    Returns:
+        Decoded token payload
+
+    Raises:
+        JWTError: If token is invalid or expired
+        ValueError: If token type doesn't match
+    """
+    payload = jwt.decode(
+        token,
+        settings.JWT_SECRET_KEY,
+        algorithms=[settings.JWT_ALGORITHM]
+    )
+
+    # Verify token type
+    if payload.get("type") != token_type:
+        raise ValueError(f"Invalid token type. Expected {token_type}, got {payload.get('type')}")
+
+    return payload

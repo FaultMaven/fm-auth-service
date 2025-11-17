@@ -7,13 +7,13 @@ Extends the PUBLIC base application with enterprise routes.
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from enterprise.api import organizations_router, teams_router, users_router, sso_router
+from enterprise.api import auth_router, organizations_router, teams_router, users_router, sso_router
 from enterprise.database import close_db
 
 # Create FastAPI app
 app = FastAPI(
     title="FaultMaven Auth Service - Enterprise Edition",
-    description="Multi-tenant SaaS authentication service",
+    description="Multi-tenant SaaS authentication service with JWT authentication",
     version="1.0.0",
     docs_url="/enterprise/docs",
     redoc_url="/enterprise/redoc",
@@ -29,6 +29,8 @@ app.add_middleware(
 )
 
 # Include enterprise routers
+# Note: auth_router must be first (no authentication required for login/register)
+app.include_router(auth_router)
 app.include_router(organizations_router)
 app.include_router(teams_router)
 app.include_router(users_router)
