@@ -1,50 +1,45 @@
-# FaultMaven Auth Service - Enterprise Edition
-# Extends the PUBLIC open-source foundation with enterprise features
+# FaultMaven Auth Service - PUBLIC Open Source Version
+# Apache 2.0 License
 
-# Start with PUBLIC foundation from Docker Hub
-FROM faultmaven/fm-auth-service:latest AS base
+# Stage 1: Builder
+FROM python:3.11-slim as builder
 
-# Set working directory
 WORKDIR /app
 
-# Install enterprise-specific system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    postgresql-client \
-    libxml2-dev \
-    libxmlsec1-dev \
-    libxmlsec1-openssl \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
+# Install poetry
+RUN pip install --no-cache-dir poetry==1.7.0
 
-# Copy enterprise requirements
-COPY requirements.txt /app/enterprise-requirements.txt
+# Copy dependency files
+COPY pyproject.toml ./
 
-# Install enterprise dependencies
-RUN pip install --no-cache-dir -r /app/enterprise-requirements.txt
+# Export dependencies to requirements.txt (no dev dependencies)
+RUN poetry export -f requirements.txt --output requirements.txt --without-hashes --without dev || \
+    echo "fastapi>=0.104.0\nuvicorn[standard]>=0.24.0\npydantic>=2.4.0\npydantic-settings>=2.0.0\nredis>=5.0.0\nhttpx>=0.25.0\nopentelemetry-api>=1.20.0\nopentelemetry-sdk>=1.20.0\nprometheus-client>=0.18.0\npython-json-logger>=2.0.0\nasyncpg>=0.29.0\nsqlalchemy>=2.0.0\nalembic>=1.12.0\npyjwt>=2.8.0\ncryptography>=41.0.0\nbcrypt>=4.1.0\npython-dotenv>=1.0.0\naiosqlite>=0.19.0" > requirements.txt
 
-# Copy enterprise code
-COPY enterprise/ /app/enterprise/
-COPY alembic/ /app/alembic/
-COPY alembic.ini /app/alembic.ini
+# Stage 2: Runtime
+FROM python:3.11-slim
 
-# Create non-root user for security
-RUN useradd -m -u 1000 authservice && \
-    chown -R authservice:authservice /app
+WORKDIR /app
 
-# Switch to non-root user
-USER authservice
+# Install runtime dependencies
+COPY --from=builder /app/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Set enterprise environment variables
-ENV ENTERPRISE_MODE=true
-ENV FAULTMAVEN_EDITION=enterprise
-ENV PYTHONPATH=/app
+# Copy source code
+COPY src/ ./src/
 
-# Expose port 8000 (internal container port)
+# Create data directory for SQLite database
+RUN mkdir -p /data && chmod 777 /data
+
+# Set PYTHONPATH to include src directory
+ENV PYTHONPATH=/app/src:$PYTHONPATH
+
+# Expose port
 EXPOSE 8000
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD curl -f http://localhost:8000/health || exit 1
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+    CMD python -c "import httpx; httpx.get('http://localhost:8000/health', timeout=2)"
 
-# Run database migrations and start server
-CMD ["sh", "-c", "alembic upgrade head && uvicorn enterprise.main:app --host 0.0.0.0 --port 8000"]
+# Run service
+CMD ["python", "-m", "uvicorn", "auth_service.main:app", "--host", "0.0.0.0", "--port", "8000"]
