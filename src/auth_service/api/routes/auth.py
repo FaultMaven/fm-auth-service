@@ -36,7 +36,7 @@ from auth_service.infrastructure.auth.user_store import DevUserStore
 from auth_service.infrastructure.redis.client import get_redis_client
 
 # Initialize router and logger
-router = APIRouter(prefix="/auth", tags=["authentication"])
+router = APIRouter(prefix="/api/v1/auth", tags=["authentication"])
 logger = logging.getLogger(__name__)
 
 # Security scheme for OpenAPI documentation
