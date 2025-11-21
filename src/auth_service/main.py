@@ -91,8 +91,8 @@ async def root():
     }
 
 
-# Include routers
-app.include_router(auth.router, prefix="/api/v1", tags=["authentication"])
+# Include routers (auth.router already has /api/v1/auth prefix)
+app.include_router(auth.router, tags=["authentication"])
 
 
 # Global exception handler
