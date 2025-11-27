@@ -184,7 +184,6 @@ class DevTokenManager:
             else:
                 # If no user store provided, create minimal user info from token
                 logger.warning("Token validation without user store - returning minimal user info")
-                from auth_service.domain.models import to_json_compatible
 
                 user = DevUser(
                     user_id=user_id,

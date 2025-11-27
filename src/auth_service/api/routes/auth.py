@@ -26,7 +26,6 @@ from auth_service.domain.models import (
     DevLoginRequest,
     DevUser,
     LogoutResponse,
-    TokenStatus,
     UserInfoResponse,
     UserProfile,
     to_json_compatible,
@@ -154,7 +153,10 @@ async def dev_login(
                 status_code=401,
                 detail={
                     "error": "authentication_failed",
-                    "message": f"User '{request.username}' does not exist. Please check the username or register a new account.",
+                    "message": (
+                        f"User '{request.username}' does not exist. "
+                        "Please check the username or register a new account."
+                    ),
                     "username": request.username,
                 },
                 headers={"WWW-Authenticate": "Bearer"},
@@ -233,7 +235,10 @@ async def dev_register(
             logger.warning(f"Registration attempt for existing user: {request.username}")
             raise HTTPException(
                 status_code=409,
-                detail=f"User with username '{request.username}' already exists. Please use login instead.",
+                detail=(
+                    f"User with username '{request.username}' already exists. "
+                    "Please use login instead."
+                ),
             )
 
         # Create new user
@@ -416,7 +421,8 @@ async def dev_revoke_all_user_tokens(
         revoked_count = await token_manager.revoke_user_tokens(current_user.user_id)
 
         logger.info(
-            f"Dev: Revoked all tokens for user {current_user.user_id}, count: {revoked_count} (correlation: {correlation_id})"
+            f"Dev: Revoked all tokens for user {current_user.user_id}, "
+            f"count: {revoked_count} (correlation: {correlation_id})"
         )
 
         return LogoutResponse(

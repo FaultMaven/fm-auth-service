@@ -251,7 +251,7 @@ class TestTokenExpiration:
         self, client: AsyncClient, test_user_admin: EnterpriseUser
     ):
         """Test that expired tokens are rejected."""
-        from datetime import datetime, timedelta
+        from datetime import timedelta
 
         from enterprise.security import create_access_token
 

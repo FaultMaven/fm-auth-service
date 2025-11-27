@@ -7,7 +7,7 @@ from uuid import uuid4
 import pytest
 from httpx import AsyncClient
 
-from enterprise.models import EnterpriseUser, Organization
+from enterprise.models import Organization
 
 
 class TestOrganizationsEndpointAuth:

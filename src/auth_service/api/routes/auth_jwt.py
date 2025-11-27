@@ -20,7 +20,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Response, status
 from pydantic import BaseModel, EmailStr, Field
 
 from auth_service.domain.models import DevUser
-from auth_service.infrastructure.auth.jwt_manager import JWTManager, get_jwt_manager
+from auth_service.infrastructure.auth.jwt_manager import get_jwt_manager
 from auth_service.infrastructure.auth.user_store import DevUserStore
 from auth_service.infrastructure.redis.client import get_redis_client
 
@@ -327,10 +327,10 @@ async def health_check():
     """
     try:
         # Check JWT manager
-        jwt_manager = get_jwt_manager()
+        get_jwt_manager()
 
         # Check user store
-        user_store = await get_user_store()
+        await get_user_store()
 
         return {
             "status": "healthy",

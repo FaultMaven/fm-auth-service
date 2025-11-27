@@ -270,8 +270,6 @@ class JWTManager:
         Returns:
             JWK dictionary
         """
-        from cryptography.hazmat.primitives.asymmetric import rsa
-
         # Get public key numbers
         public_numbers = self.public_key.public_numbers()
 
@@ -307,8 +305,6 @@ def get_jwt_manager() -> JWTManager:
     Raises:
         RuntimeError: If JWT manager not initialized
     """
-    global _jwt_manager_instance
-
     if _jwt_manager_instance is None:
         raise RuntimeError("JWT manager not initialized. Call initialize_jwt_manager() first.")
 

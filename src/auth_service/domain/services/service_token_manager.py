@@ -5,7 +5,6 @@ Manages JWT token generation for service-to-service authentication.
 
 import logging
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
 from typing import Any, Dict, List
 
 import jwt

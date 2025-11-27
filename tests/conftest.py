@@ -10,7 +10,6 @@ Provides fixtures for:
 
 import asyncio
 from typing import AsyncGenerator, Generator
-from uuid import UUID
 
 import pytest
 import pytest_asyncio

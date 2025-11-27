@@ -14,7 +14,6 @@ Key Components:
 """
 
 import re
-from datetime import datetime
 from typing import List, Optional
 
 from pydantic import BaseModel, Field, field_validator
@@ -56,7 +55,8 @@ class DevLoginRequest(BaseModel):
 
         if not (re.match(email_pattern, v) or re.match(username_pattern, v)):
             raise ValueError(
-                "Username must be a valid email address or contain only letters, numbers, dots, underscores, and hyphens"
+                "Username must be a valid email address or contain only letters, "
+                "numbers, dots, underscores, and hyphens"
             )
         return v.lower()  # Store usernames in lowercase for consistency
 

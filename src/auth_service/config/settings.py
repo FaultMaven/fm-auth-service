@@ -32,7 +32,10 @@ class Settings(BaseSettings):
     def redis_url(self) -> str:
         """Construct Redis URL from components"""
         if self.redis_password:
-            return f"redis://:{self.redis_password}@{self.redis_host}:{self.redis_port}/{self.redis_db}"
+            return (
+                f"redis://:{self.redis_password}@{self.redis_host}:"
+                f"{self.redis_port}/{self.redis_db}"
+            )
         return f"redis://{self.redis_host}:{self.redis_port}/{self.redis_db}"
 
     # Database configuration (for future PostgreSQL migration)

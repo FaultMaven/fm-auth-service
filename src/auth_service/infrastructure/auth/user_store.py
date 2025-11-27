@@ -165,7 +165,8 @@ class DevUserStore:
             username = username.strip()
             if not self._validate_username(username):
                 raise ValueError(
-                    "Invalid username format (3-50 chars, email address or alphanumeric with ., _, -)"
+                    "Invalid username format "
+                    "(3-50 chars, email address or alphanumeric with ., _, -)"
                 )
 
             if email:
@@ -326,7 +327,7 @@ class DevUserStore:
             user_ids = await self._redis_smembers(self.user_list_key)
 
             # Apply pagination
-            paginated_ids = user_ids[offset : offset + limit]
+            paginated_ids = user_ids[offset: offset + limit]
 
             users = []
             for user_id in paginated_ids:
