@@ -4,9 +4,14 @@ Team model for sub-organization grouping.
 Teams are groups within an organization.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from uuid import UUID, uuid4
+
+
+def _utc_now() -> datetime:
+    """Return current UTC time (timezone-aware)."""
+    return datetime.now(timezone.utc)
 
 from sqlalchemy import String, DateTime, ForeignKey, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -45,11 +50,11 @@ class Team(Base):
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     # Timestamps
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utc_now, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
-        default=datetime.utcnow,
-        onupdate=datetime.utcnow,
+        default=_utc_now,
+        onupdate=_utc_now,
         nullable=False
     )
     deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
@@ -74,4 +79,4 @@ class Team(Base):
 
     def soft_delete(self) -> None:
         """Soft delete the team."""
-        self.deleted_at = datetime.utcnow()
+        self.deleted_at = datetime.now(timezone.utc)

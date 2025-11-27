@@ -4,13 +4,18 @@ Audit logging model for compliance.
 Tracks all authentication and authorization events.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from uuid import UUID, uuid4
 
+
+def _utc_now() -> datetime:
+    """Return current UTC time (timezone-aware)."""
+    return datetime.now(timezone.utc)
+
 from sqlalchemy import String, DateTime, ForeignKey, Text, JSON
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy.dialects.postgresql import UUID as PG_UUID, JSONB
+from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 
 from enterprise.models.base import Base
 
@@ -68,10 +73,10 @@ class AuditLog(Base):
     error_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     # Additional context data (flexible JSON)
-    context_data: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
+    context_data: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
 
     # Timestamp
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utc_now, nullable=False, index=True)
 
     # Relationships
     user: Mapped[Optional["EnterpriseUser"]] = relationship(

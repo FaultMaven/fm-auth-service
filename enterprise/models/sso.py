@@ -4,15 +4,20 @@ SSO configuration model.
 Stores SAML/OAuth/OIDC configuration per organization.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from uuid import UUID, uuid4
 
-from sqlalchemy import String, DateTime, ForeignKey, Text, Boolean
+from sqlalchemy import String, DateTime, ForeignKey, Text, Boolean, JSON
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy.dialects.postgresql import UUID as PG_UUID, JSONB
+from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 
 from enterprise.models.base import Base
+
+
+def _utc_now() -> datetime:
+    """Return current UTC time (timezone-aware)."""
+    return datetime.now(timezone.utc)
 
 
 class SSOConfiguration(Base):
@@ -68,7 +73,7 @@ class SSOConfiguration(Base):
 
     # Attribute mapping (flexible JSON)
     # Maps SSO attributes to user fields: {"email": "emailAddress", "name": "displayName"}
-    attribute_mapping: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
+    attribute_mapping: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
 
     # Additional configuration
     auto_create_users: Mapped[bool] = mapped_column(Boolean, default=True)  # Auto-provision new users
@@ -78,11 +83,11 @@ class SSOConfiguration(Base):
     )  # Default role for auto-created users
 
     # Timestamps
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utc_now, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
-        default=datetime.utcnow,
-        onupdate=datetime.utcnow,
+        default=_utc_now,
+        onupdate=_utc_now,
         nullable=False
     )
 
