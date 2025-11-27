@@ -327,7 +327,7 @@ class DevUserStore:
             user_ids = await self._redis_smembers(self.user_list_key)
 
             # Apply pagination
-            paginated_ids = user_ids[offset: offset + limit]
+            paginated_ids = user_ids[offset : offset + limit]
 
             users = []
             for user_id in paginated_ids:
