@@ -8,7 +8,7 @@ from auth_service.domain.models import (
     TokenStatus,
     TokenValidationResult,
     to_json_compatible,
-    parse_utc_timestamp
+    parse_utc_timestamp,
 )
 
 
@@ -23,7 +23,7 @@ class TestDevUser:
             username="testuser",
             email="test@example.com",
             display_name="Test User",
-            created_at=now
+            created_at=now,
         )
 
         assert user.user_id == "test-123"
@@ -31,7 +31,7 @@ class TestDevUser:
         assert user.email == "test@example.com"
         assert user.is_dev_user is True
         assert user.is_active is True
-        assert user.roles == ['admin']  # Default
+        assert user.roles == ["admin"]  # Default
 
     def test_user_to_dict(self):
         """Test user serialization to dict"""
@@ -41,16 +41,16 @@ class TestDevUser:
             username="testuser",
             email="test@example.com",
             display_name="Test User",
-            created_at=now
+            created_at=now,
         )
 
         user_dict = user.to_dict()
 
-        assert user_dict['user_id'] == "test-123"
-        assert user_dict['username'] == "testuser"
-        assert user_dict['email'] == "test@example.com"
-        assert user_dict['roles'] == ['admin']
-        assert isinstance(user_dict['created_at'], str)
+        assert user_dict["user_id"] == "test-123"
+        assert user_dict["username"] == "testuser"
+        assert user_dict["email"] == "test@example.com"
+        assert user_dict["roles"] == ["admin"]
+        assert isinstance(user_dict["created_at"], str)
 
     def test_user_from_dict(self):
         """Test user deserialization from dict"""
@@ -62,7 +62,7 @@ class TestDevUser:
             "created_at": "2025-01-15T10:00:00+00:00",
             "is_dev_user": True,
             "is_active": True,
-            "roles": ["user", "admin"]
+            "roles": ["user", "admin"],
         }
 
         user = DevUser.from_dict(user_data)
@@ -85,7 +85,7 @@ class TestAuthToken:
             user_id="user-456",
             token_hash="abc123",
             expires_at=expires,
-            created_at=now
+            created_at=now,
         )
 
         assert token.token_id == "token-123"
@@ -102,7 +102,7 @@ class TestAuthToken:
             user_id="user-456",
             token_hash="abc123",
             expires_at=past,  # Expired 1 hour ago
-            created_at=now - timedelta(hours=25)
+            created_at=now - timedelta(hours=25),
         )
 
         assert token.is_expired is True
@@ -118,7 +118,7 @@ class TestAuthToken:
             user_id="user-456",
             token_hash="abc123",
             expires_at=future,
-            created_at=now
+            created_at=now,
         )
 
         assert token.is_expired is False
@@ -136,13 +136,10 @@ class TestTokenValidationResult:
             username="testuser",
             email="test@example.com",
             display_name="Test User",
-            created_at=datetime.now(timezone.utc)
+            created_at=datetime.now(timezone.utc),
         )
 
-        result = TokenValidationResult(
-            status=TokenStatus.VALID,
-            user=user
-        )
+        result = TokenValidationResult(status=TokenStatus.VALID, user=user)
 
         assert result.is_valid is True
         assert result.is_expired is False
@@ -151,8 +148,7 @@ class TestTokenValidationResult:
     def test_expired_result(self):
         """Test expired validation result"""
         result = TokenValidationResult(
-            status=TokenStatus.EXPIRED,
-            error_message="Token has expired"
+            status=TokenStatus.EXPIRED, error_message="Token has expired"
         )
 
         assert result.is_valid is False
@@ -161,10 +157,7 @@ class TestTokenValidationResult:
 
     def test_invalid_result(self):
         """Test invalid validation result"""
-        result = TokenValidationResult(
-            status=TokenStatus.INVALID,
-            error_message="Token not found"
-        )
+        result = TokenValidationResult(status=TokenStatus.INVALID, error_message="Token not found")
 
         assert result.is_valid is False
         assert result.is_expired is False

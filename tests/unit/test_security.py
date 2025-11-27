@@ -13,7 +13,7 @@ from enterprise.security import (
     verify_password,
     create_access_token,
     create_refresh_token,
-    verify_token
+    verify_token,
 )
 from enterprise.config.settings import get_settings
 
@@ -76,11 +76,7 @@ class TestAccessTokenGeneration:
         org_id = uuid4()
         email = "test@example.com"
 
-        token = create_access_token(
-            user_id=user_id,
-            organization_id=org_id,
-            email=email
-        )
+        token = create_access_token(user_id=user_id, organization_id=org_id, email=email)
 
         assert isinstance(token, str)
         assert len(token) > 0
@@ -91,18 +87,10 @@ class TestAccessTokenGeneration:
         org_id = uuid4()
         email = "test@example.com"
 
-        token = create_access_token(
-            user_id=user_id,
-            organization_id=org_id,
-            email=email
-        )
+        token = create_access_token(user_id=user_id, organization_id=org_id, email=email)
 
         # Decode token without verification for testing
-        payload = jwt.decode(
-            token,
-            settings.JWT_SECRET_KEY,
-            algorithms=[settings.JWT_ALGORITHM]
-        )
+        payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
 
         assert payload["sub"] == str(user_id)
         assert payload["email"] == email
@@ -119,17 +107,10 @@ class TestAccessTokenGeneration:
         custom_expiry = timedelta(minutes=60)
 
         token = create_access_token(
-            user_id=user_id,
-            organization_id=org_id,
-            email=email,
-            expires_delta=custom_expiry
+            user_id=user_id, organization_id=org_id, email=email, expires_delta=custom_expiry
         )
 
-        payload = jwt.decode(
-            token,
-            settings.JWT_SECRET_KEY,
-            algorithms=[settings.JWT_ALGORITHM]
-        )
+        payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
 
         # Verify expiration is approximately 60 minutes from now
         exp_diff = payload["exp"] - payload["iat"]
@@ -141,18 +122,10 @@ class TestAccessTokenGeneration:
         org_id = uuid4()
         email = "test@example.com"
 
-        token = create_access_token(
-            user_id=user_id,
-            organization_id=org_id,
-            email=email
-        )
+        token = create_access_token(user_id=user_id, organization_id=org_id, email=email)
 
         # Should not raise exception
-        payload = jwt.decode(
-            token,
-            settings.JWT_SECRET_KEY,
-            algorithms=[settings.JWT_ALGORITHM]
-        )
+        payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
 
         assert payload is not None
 
@@ -175,11 +148,7 @@ class TestRefreshTokenGeneration:
 
         token = create_refresh_token(user_id=user_id)
 
-        payload = jwt.decode(
-            token,
-            settings.JWT_SECRET_KEY,
-            algorithms=[settings.JWT_ALGORITHM]
-        )
+        payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
 
         assert payload["sub"] == str(user_id)
         assert payload["type"] == "refresh"
@@ -194,16 +163,9 @@ class TestRefreshTokenGeneration:
         user_id = uuid4()
         custom_expiry = timedelta(days=14)
 
-        token = create_refresh_token(
-            user_id=user_id,
-            expires_delta=custom_expiry
-        )
+        token = create_refresh_token(user_id=user_id, expires_delta=custom_expiry)
 
-        payload = jwt.decode(
-            token,
-            settings.JWT_SECRET_KEY,
-            algorithms=[settings.JWT_ALGORITHM]
-        )
+        payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
 
         # Verify expiration is approximately 14 days from now
         exp_diff = payload["exp"] - payload["iat"]
@@ -215,22 +177,14 @@ class TestRefreshTokenGeneration:
         org_id = uuid4()
         email = "test@example.com"
 
-        access_token = create_access_token(
-            user_id=user_id,
-            organization_id=org_id,
-            email=email
-        )
+        access_token = create_access_token(user_id=user_id, organization_id=org_id, email=email)
         refresh_token = create_refresh_token(user_id=user_id)
 
         access_payload = jwt.decode(
-            access_token,
-            settings.JWT_SECRET_KEY,
-            algorithms=[settings.JWT_ALGORITHM]
+            access_token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM]
         )
         refresh_payload = jwt.decode(
-            refresh_token,
-            settings.JWT_SECRET_KEY,
-            algorithms=[settings.JWT_ALGORITHM]
+            refresh_token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM]
         )
 
         assert access_payload["type"] == "access"
@@ -248,11 +202,7 @@ class TestTokenVerification:
         org_id = uuid4()
         email = "test@example.com"
 
-        token = create_access_token(
-            user_id=user_id,
-            organization_id=org_id,
-            email=email
-        )
+        token = create_access_token(user_id=user_id, organization_id=org_id, email=email)
 
         payload = verify_token(token, token_type="access")
 
@@ -285,9 +235,7 @@ class TestTokenVerification:
         # Create token with wrong secret
         user_id = uuid4()
         token = jwt.encode(
-            {"sub": str(user_id), "type": "access"},
-            "wrong_secret_key",
-            algorithm="HS256"
+            {"sub": str(user_id), "type": "access"}, "wrong_secret_key", algorithm="HS256"
         )
 
         with pytest.raises(JWTError):

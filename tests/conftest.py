@@ -39,11 +39,7 @@ def event_loop() -> Generator:
 @pytest_asyncio.fixture
 async def test_engine():
     """Create test database engine."""
-    engine = create_async_engine(
-        TEST_DATABASE_URL,
-        poolclass=NullPool,
-        echo=False
-    )
+    engine = create_async_engine(TEST_DATABASE_URL, poolclass=NullPool, echo=False)
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
@@ -59,11 +55,7 @@ async def test_engine():
 @pytest_asyncio.fixture
 async def test_db(test_engine) -> AsyncGenerator[AsyncSession, None]:
     """Create test database session."""
-    async_session = async_sessionmaker(
-        test_engine,
-        class_=AsyncSession,
-        expire_on_commit=False
-    )
+    async_session = async_sessionmaker(test_engine, class_=AsyncSession, expire_on_commit=False)
 
     async with async_session() as session:
         yield session
@@ -80,7 +72,7 @@ async def test_organization(test_db: AsyncSession) -> Organization:
         contact_name="Test Admin",
         max_users=50,
         max_teams=10,
-        is_active=True
+        is_active=True,
     )
     test_db.add(org)
     await test_db.commit()
@@ -92,9 +84,7 @@ async def test_organization(test_db: AsyncSession) -> Organization:
 async def test_role_admin(test_db: AsyncSession, test_organization: Organization) -> Role:
     """Create admin role with all permissions."""
     role = Role(
-        organization_id=test_organization.id,
-        name="Admin",
-        description="Full access administrator"
+        organization_id=test_organization.id, name="Admin", description="Full access administrator"
     )
     test_db.add(role)
     await test_db.flush()
@@ -131,11 +121,7 @@ async def test_role_admin(test_db: AsyncSession, test_organization: Organization
 @pytest_asyncio.fixture
 async def test_role_member(test_db: AsyncSession, test_organization: Organization) -> Role:
     """Create member role with limited permissions."""
-    role = Role(
-        organization_id=test_organization.id,
-        name="Member",
-        description="Standard member"
-    )
+    role = Role(organization_id=test_organization.id, name="Member", description="Standard member")
     test_db.add(role)
     await test_db.flush()
 
@@ -164,7 +150,7 @@ async def test_team(test_db: AsyncSession, test_organization: Organization) -> T
         organization_id=test_organization.id,
         name="Test Team",
         slug="test-team",
-        description="Test team for testing"
+        description="Test team for testing",
     )
     test_db.add(team)
     await test_db.commit()
@@ -174,10 +160,7 @@ async def test_team(test_db: AsyncSession, test_organization: Organization) -> T
 
 @pytest_asyncio.fixture
 async def test_user_admin(
-    test_db: AsyncSession,
-    test_organization: Organization,
-    test_role_admin: Role,
-    test_team: Team
+    test_db: AsyncSession, test_organization: Organization, test_role_admin: Role, test_team: Team
 ) -> EnterpriseUser:
     """Create test admin user."""
     user = EnterpriseUser(
@@ -187,7 +170,7 @@ async def test_user_admin(
         full_name="Admin User",
         hashed_password=hash_password("admin123"),
         is_active=True,
-        is_verified=True
+        is_verified=True,
     )
     test_db.add(user)
     await test_db.flush()
@@ -202,10 +185,7 @@ async def test_user_admin(
 
 @pytest_asyncio.fixture
 async def test_user_member(
-    test_db: AsyncSession,
-    test_organization: Organization,
-    test_role_member: Role,
-    test_team: Team
+    test_db: AsyncSession, test_organization: Organization, test_role_member: Role, test_team: Team
 ) -> EnterpriseUser:
     """Create test member user."""
     user = EnterpriseUser(
@@ -215,7 +195,7 @@ async def test_user_member(
         full_name="Member User",
         hashed_password=hash_password("member123"),
         is_active=True,
-        is_verified=True
+        is_verified=True,
     )
     test_db.add(user)
     await test_db.flush()
@@ -230,9 +210,7 @@ async def test_user_member(
 
 @pytest_asyncio.fixture
 async def test_user_inactive(
-    test_db: AsyncSession,
-    test_organization: Organization,
-    test_team: Team
+    test_db: AsyncSession, test_organization: Organization, test_team: Team
 ) -> EnterpriseUser:
     """Create inactive test user."""
     user = EnterpriseUser(
@@ -242,7 +220,7 @@ async def test_user_inactive(
         full_name="Inactive User",
         hashed_password=hash_password("inactive123"),
         is_active=False,  # Inactive
-        is_verified=True
+        is_verified=True,
     )
     test_db.add(user)
     await test_db.commit()
@@ -256,7 +234,7 @@ async def admin_access_token(test_user_admin: EnterpriseUser) -> str:
     return create_access_token(
         user_id=test_user_admin.id,
         organization_id=test_user_admin.organization_id,
-        email=test_user_admin.email
+        email=test_user_admin.email,
     )
 
 
@@ -272,13 +250,14 @@ async def member_access_token(test_user_member: EnterpriseUser) -> str:
     return create_access_token(
         user_id=test_user_member.id,
         organization_id=test_user_member.organization_id,
-        email=test_user_member.email
+        email=test_user_member.email,
     )
 
 
 @pytest_asyncio.fixture
 async def client(test_db: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
     """Create test HTTP client with database session override."""
+
     async def override_get_db():
         yield test_db
 

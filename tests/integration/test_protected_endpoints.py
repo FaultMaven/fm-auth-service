@@ -21,15 +21,12 @@ class TestOrganizationsEndpointAuth:
 
     @pytest.mark.asyncio
     async def test_list_organizations_with_auth(
-        self,
-        client: AsyncClient,
-        admin_access_token: str,
-        test_organization: Organization
+        self, client: AsyncClient, admin_access_token: str, test_organization: Organization
     ):
         """Test listing organizations with authentication."""
         response = await client.get(
             "/api/v1/enterprise/organizations",
-            headers={"Authorization": f"Bearer {admin_access_token}"}
+            headers={"Authorization": f"Bearer {admin_access_token}"},
         )
 
         assert response.status_code == 200
@@ -42,16 +39,13 @@ class TestOrganizationsEndpointAuth:
 
     @pytest.mark.asyncio
     async def test_get_organization_requires_org_access(
-        self,
-        client: AsyncClient,
-        admin_access_token: str,
-        test_organization: Organization
+        self, client: AsyncClient, admin_access_token: str, test_organization: Organization
     ):
         """Test getting organization requires organization access."""
         # Access own organization - should succeed
         response = await client.get(
             f"/api/v1/enterprise/organizations/{test_organization.id}",
-            headers={"Authorization": f"Bearer {admin_access_token}"}
+            headers={"Authorization": f"Bearer {admin_access_token}"},
         )
 
         assert response.status_code == 200
@@ -60,7 +54,7 @@ class TestOrganizationsEndpointAuth:
         different_org_id = uuid4()
         response = await client.get(
             f"/api/v1/enterprise/organizations/{different_org_id}",
-            headers={"Authorization": f"Bearer {admin_access_token}"}
+            headers={"Authorization": f"Bearer {admin_access_token}"},
         )
 
         assert response.status_code == 403
@@ -72,10 +66,7 @@ class TestTeamsEndpointAuth:
 
     @pytest.mark.asyncio
     async def test_create_team_without_permission(
-        self,
-        client: AsyncClient,
-        member_access_token: str,
-        test_organization: Organization
+        self, client: AsyncClient, member_access_token: str, test_organization: Organization
     ):
         """Test creating team without required permission."""
         response = await client.post(
@@ -84,8 +75,8 @@ class TestTeamsEndpointAuth:
             json={
                 "organization_id": str(test_organization.id),
                 "name": "New Team",
-                "slug": "new-team"
-            }
+                "slug": "new-team",
+            },
         )
 
         assert response.status_code == 403
@@ -94,10 +85,7 @@ class TestTeamsEndpointAuth:
 
     @pytest.mark.asyncio
     async def test_create_team_with_permission(
-        self,
-        client: AsyncClient,
-        admin_access_token: str,
-        test_organization: Organization
+        self, client: AsyncClient, admin_access_token: str, test_organization: Organization
     ):
         """Test creating team with required permission."""
         response = await client.post(
@@ -106,8 +94,8 @@ class TestTeamsEndpointAuth:
             json={
                 "organization_id": str(test_organization.id),
                 "name": "Engineering Team",
-                "slug": "engineering-team"
-            }
+                "slug": "engineering-team",
+            },
         )
 
         assert response.status_code == 201
@@ -117,9 +105,7 @@ class TestTeamsEndpointAuth:
 
     @pytest.mark.asyncio
     async def test_create_team_different_org_blocked(
-        self,
-        client: AsyncClient,
-        admin_access_token: str
+        self, client: AsyncClient, admin_access_token: str
     ):
         """Test creating team in different organization is blocked."""
         different_org_id = uuid4()
@@ -130,8 +116,8 @@ class TestTeamsEndpointAuth:
             json={
                 "organization_id": str(different_org_id),
                 "name": "Cross-Org Team",
-                "slug": "cross-org-team"
-            }
+                "slug": "cross-org-team",
+            },
         )
 
         assert response.status_code == 403
@@ -139,10 +125,7 @@ class TestTeamsEndpointAuth:
 
     @pytest.mark.asyncio
     async def test_list_teams_enforces_multi_tenancy(
-        self,
-        client: AsyncClient,
-        admin_access_token: str,
-        test_organization: Organization
+        self, client: AsyncClient, admin_access_token: str, test_organization: Organization
     ):
         """Test listing teams enforces multi-tenancy."""
         # Try to list teams for different organization
@@ -150,7 +133,7 @@ class TestTeamsEndpointAuth:
 
         response = await client.get(
             f"/api/v1/enterprise/teams/organization/{different_org_id}",
-            headers={"Authorization": f"Bearer {admin_access_token}"}
+            headers={"Authorization": f"Bearer {admin_access_token}"},
         )
 
         assert response.status_code == 403
@@ -162,10 +145,7 @@ class TestUsersEndpointAuth:
 
     @pytest.mark.asyncio
     async def test_create_user_without_permission(
-        self,
-        client: AsyncClient,
-        member_access_token: str,
-        test_organization: Organization
+        self, client: AsyncClient, member_access_token: str, test_organization: Organization
     ):
         """Test creating user without required permission."""
         response = await client.post(
@@ -175,8 +155,8 @@ class TestUsersEndpointAuth:
                 "organization_id": str(test_organization.id),
                 "email": "newuser@testorg.com",
                 "full_name": "New User",
-                "password": "password123"
-            }
+                "password": "password123",
+            },
         )
 
         assert response.status_code == 403
@@ -185,10 +165,7 @@ class TestUsersEndpointAuth:
 
     @pytest.mark.asyncio
     async def test_create_user_with_permission(
-        self,
-        client: AsyncClient,
-        admin_access_token: str,
-        test_organization: Organization
+        self, client: AsyncClient, admin_access_token: str, test_organization: Organization
     ):
         """Test creating user with required permission."""
         response = await client.post(
@@ -198,8 +175,8 @@ class TestUsersEndpointAuth:
                 "organization_id": str(test_organization.id),
                 "email": "newmember@testorg.com",
                 "full_name": "New Member",
-                "password": "password123"
-            }
+                "password": "password123",
+            },
         )
 
         assert response.status_code == 201
@@ -209,9 +186,7 @@ class TestUsersEndpointAuth:
 
     @pytest.mark.asyncio
     async def test_create_user_different_org_blocked(
-        self,
-        client: AsyncClient,
-        admin_access_token: str
+        self, client: AsyncClient, admin_access_token: str
     ):
         """Test creating user in different organization is blocked."""
         different_org_id = uuid4()
@@ -223,8 +198,8 @@ class TestUsersEndpointAuth:
                 "organization_id": str(different_org_id),
                 "email": "crossorg@test.com",
                 "full_name": "Cross Org User",
-                "password": "password123"
-            }
+                "password": "password123",
+            },
         )
 
         assert response.status_code == 403
@@ -236,10 +211,7 @@ class TestSSOEndpointAuth:
 
     @pytest.mark.asyncio
     async def test_create_sso_config_without_admin(
-        self,
-        client: AsyncClient,
-        member_access_token: str,
-        test_organization: Organization
+        self, client: AsyncClient, member_access_token: str, test_organization: Organization
     ):
         """Test creating SSO config without admin role."""
         response = await client.post(
@@ -250,8 +222,8 @@ class TestSSOEndpointAuth:
                 "provider_type": "saml",
                 "provider_name": "Test SSO",
                 "saml_entity_id": "https://test.example.com",
-                "saml_sso_url": "https://test.example.com/sso"
-            }
+                "saml_sso_url": "https://test.example.com/sso",
+            },
         )
 
         assert response.status_code == 403
@@ -259,10 +231,7 @@ class TestSSOEndpointAuth:
 
     @pytest.mark.asyncio
     async def test_create_sso_config_with_admin(
-        self,
-        client: AsyncClient,
-        admin_access_token: str,
-        test_organization: Organization
+        self, client: AsyncClient, admin_access_token: str, test_organization: Organization
     ):
         """Test creating SSO config with admin role."""
         response = await client.post(
@@ -273,8 +242,8 @@ class TestSSOEndpointAuth:
                 "provider_type": "saml",
                 "provider_name": "Test SAML",
                 "saml_entity_id": "https://test.example.com",
-                "saml_sso_url": "https://test.example.com/sso"
-            }
+                "saml_sso_url": "https://test.example.com/sso",
+            },
         )
 
         assert response.status_code == 201
@@ -288,10 +257,7 @@ class TestMultiTenantIsolation:
 
     @pytest.mark.asyncio
     async def test_cannot_access_other_org_teams(
-        self,
-        client: AsyncClient,
-        admin_access_token: str,
-        test_team
+        self, client: AsyncClient, admin_access_token: str, test_team
     ):
         """Test cannot access teams from other organizations."""
         # Create another organization (simulated by using wrong UUID)
@@ -299,33 +265,28 @@ class TestMultiTenantIsolation:
 
         response = await client.get(
             f"/api/v1/enterprise/teams/organization/{other_org_id}",
-            headers={"Authorization": f"Bearer {admin_access_token}"}
+            headers={"Authorization": f"Bearer {admin_access_token}"},
         )
 
         assert response.status_code == 403
 
     @pytest.mark.asyncio
     async def test_cannot_access_other_org_users(
-        self,
-        client: AsyncClient,
-        admin_access_token: str
+        self, client: AsyncClient, admin_access_token: str
     ):
         """Test cannot access users from other organizations."""
         other_org_id = uuid4()
 
         response = await client.get(
             f"/api/v1/enterprise/users/organization/{other_org_id}",
-            headers={"Authorization": f"Bearer {admin_access_token}"}
+            headers={"Authorization": f"Bearer {admin_access_token}"},
         )
 
         assert response.status_code == 403
 
     @pytest.mark.asyncio
     async def test_cannot_update_other_org_resources(
-        self,
-        client: AsyncClient,
-        admin_access_token: str,
-        test_organization: Organization
+        self, client: AsyncClient, admin_access_token: str, test_organization: Organization
     ):
         """Test cannot update resources from other organizations."""
         other_org_id = uuid4()
@@ -333,7 +294,7 @@ class TestMultiTenantIsolation:
         response = await client.put(
             f"/api/v1/enterprise/organizations/{other_org_id}",
             headers={"Authorization": f"Bearer {admin_access_token}"},
-            json={"name": "Hacked Org"}
+            json={"name": "Hacked Org"},
         )
 
         assert response.status_code == 403

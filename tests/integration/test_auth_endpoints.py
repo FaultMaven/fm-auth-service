@@ -12,18 +12,11 @@ class TestLoginEndpoint:
     """Test POST /api/v1/enterprise/auth/login endpoint."""
 
     @pytest.mark.asyncio
-    async def test_login_success(
-        self,
-        client: AsyncClient,
-        test_user_admin: EnterpriseUser
-    ):
+    async def test_login_success(self, client: AsyncClient, test_user_admin: EnterpriseUser):
         """Test successful login with correct credentials."""
         response = await client.post(
             "/api/v1/enterprise/auth/login",
-            json={
-                "email": "admin@testorg.com",
-                "password": "admin123"
-            }
+            json={"email": "admin@testorg.com", "password": "admin123"},
         )
 
         assert response.status_code == 200
@@ -39,18 +32,11 @@ class TestLoginEndpoint:
         assert len(data["refresh_token"]) > 0
 
     @pytest.mark.asyncio
-    async def test_login_wrong_password(
-        self,
-        client: AsyncClient,
-        test_user_admin: EnterpriseUser
-    ):
+    async def test_login_wrong_password(self, client: AsyncClient, test_user_admin: EnterpriseUser):
         """Test login with incorrect password."""
         response = await client.post(
             "/api/v1/enterprise/auth/login",
-            json={
-                "email": "admin@testorg.com",
-                "password": "wrongpassword"
-            }
+            json={"email": "admin@testorg.com", "password": "wrongpassword"},
         )
 
         assert response.status_code == 401
@@ -62,10 +48,7 @@ class TestLoginEndpoint:
         """Test login with non-existent email."""
         response = await client.post(
             "/api/v1/enterprise/auth/login",
-            json={
-                "email": "nonexistent@testorg.com",
-                "password": "somepassword"
-            }
+            json={"email": "nonexistent@testorg.com", "password": "somepassword"},
         )
 
         assert response.status_code == 401
@@ -74,17 +57,12 @@ class TestLoginEndpoint:
 
     @pytest.mark.asyncio
     async def test_login_inactive_user(
-        self,
-        client: AsyncClient,
-        test_user_inactive: EnterpriseUser
+        self, client: AsyncClient, test_user_inactive: EnterpriseUser
     ):
         """Test login with inactive user account."""
         response = await client.post(
             "/api/v1/enterprise/auth/login",
-            json={
-                "email": "inactive@testorg.com",
-                "password": "inactive123"
-            }
+            json={"email": "inactive@testorg.com", "password": "inactive123"},
         )
 
         assert response.status_code == 403
@@ -96,10 +74,7 @@ class TestLoginEndpoint:
         """Test login with invalid email format."""
         response = await client.post(
             "/api/v1/enterprise/auth/login",
-            json={
-                "email": "not-an-email",
-                "password": "somepassword"
-            }
+            json={"email": "not-an-email", "password": "somepassword"},
         )
 
         assert response.status_code == 422  # Validation error
@@ -108,8 +83,7 @@ class TestLoginEndpoint:
     async def test_login_missing_fields(self, client: AsyncClient):
         """Test login with missing fields."""
         response = await client.post(
-            "/api/v1/enterprise/auth/login",
-            json={"email": "admin@testorg.com"}
+            "/api/v1/enterprise/auth/login", json={"email": "admin@testorg.com"}
         )
 
         assert response.status_code == 422  # Validation error
@@ -119,11 +93,7 @@ class TestRegisterEndpoint:
     """Test POST /api/v1/enterprise/auth/register endpoint."""
 
     @pytest.mark.asyncio
-    async def test_register_success(
-        self,
-        client: AsyncClient,
-        test_organization: Organization
-    ):
+    async def test_register_success(self, client: AsyncClient, test_organization: Organization):
         """Test successful user registration."""
         response = await client.post(
             "/api/v1/enterprise/auth/register",
@@ -131,8 +101,8 @@ class TestRegisterEndpoint:
                 "organization_id": str(test_organization.id),
                 "email": "newuser@testorg.com",
                 "full_name": "New User",
-                "password": "newpass123"
-            }
+                "password": "newpass123",
+            },
         )
 
         assert response.status_code == 201
@@ -146,10 +116,7 @@ class TestRegisterEndpoint:
 
     @pytest.mark.asyncio
     async def test_register_duplicate_email(
-        self,
-        client: AsyncClient,
-        test_organization: Organization,
-        test_user_admin: EnterpriseUser
+        self, client: AsyncClient, test_organization: Organization, test_user_admin: EnterpriseUser
     ):
         """Test registration with existing email."""
         response = await client.post(
@@ -158,8 +125,8 @@ class TestRegisterEndpoint:
                 "organization_id": str(test_organization.id),
                 "email": "admin@testorg.com",  # Already exists
                 "full_name": "Another Admin",
-                "password": "password123"
-            }
+                "password": "password123",
+            },
         )
 
         assert response.status_code == 409
@@ -177,8 +144,8 @@ class TestRegisterEndpoint:
                 "organization_id": str(uuid4()),
                 "email": "user@testorg.com",
                 "full_name": "Test User",
-                "password": "password123"
-            }
+                "password": "password123",
+            },
         )
 
         assert response.status_code == 404
@@ -187,9 +154,7 @@ class TestRegisterEndpoint:
 
     @pytest.mark.asyncio
     async def test_register_invalid_email(
-        self,
-        client: AsyncClient,
-        test_organization: Organization
+        self, client: AsyncClient, test_organization: Organization
     ):
         """Test registration with invalid email format."""
         response = await client.post(
@@ -198,17 +163,15 @@ class TestRegisterEndpoint:
                 "organization_id": str(test_organization.id),
                 "email": "not-an-email",
                 "full_name": "Test User",
-                "password": "password123"
-            }
+                "password": "password123",
+            },
         )
 
         assert response.status_code == 422  # Validation error
 
     @pytest.mark.asyncio
     async def test_register_short_password(
-        self,
-        client: AsyncClient,
-        test_organization: Organization
+        self, client: AsyncClient, test_organization: Organization
     ):
         """Test registration with password too short."""
         response = await client.post(
@@ -217,8 +180,8 @@ class TestRegisterEndpoint:
                 "organization_id": str(test_organization.id),
                 "email": "user@testorg.com",
                 "full_name": "Test User",
-                "password": "short"  # Less than 8 characters
-            }
+                "password": "short",  # Less than 8 characters
+            },
         )
 
         assert response.status_code == 422  # Validation error
@@ -228,15 +191,10 @@ class TestRefreshTokenEndpoint:
     """Test POST /api/v1/enterprise/auth/refresh endpoint."""
 
     @pytest.mark.asyncio
-    async def test_refresh_token_success(
-        self,
-        client: AsyncClient,
-        admin_refresh_token: str
-    ):
+    async def test_refresh_token_success(self, client: AsyncClient, admin_refresh_token: str):
         """Test successful token refresh."""
         response = await client.post(
-            "/api/v1/enterprise/auth/refresh",
-            json={"refresh_token": admin_refresh_token}
+            "/api/v1/enterprise/auth/refresh", json={"refresh_token": admin_refresh_token}
         )
 
         assert response.status_code == 200
@@ -252,14 +210,11 @@ class TestRefreshTokenEndpoint:
 
     @pytest.mark.asyncio
     async def test_refresh_token_with_access_token(
-        self,
-        client: AsyncClient,
-        admin_access_token: str
+        self, client: AsyncClient, admin_access_token: str
     ):
         """Test refresh with access token (should fail)."""
         response = await client.post(
-            "/api/v1/enterprise/auth/refresh",
-            json={"refresh_token": admin_access_token}
+            "/api/v1/enterprise/auth/refresh", json={"refresh_token": admin_access_token}
         )
 
         assert response.status_code == 401
@@ -270,8 +225,7 @@ class TestRefreshTokenEndpoint:
     async def test_refresh_token_invalid_token(self, client: AsyncClient):
         """Test refresh with invalid token."""
         response = await client.post(
-            "/api/v1/enterprise/auth/refresh",
-            json={"refresh_token": "invalid.token.here"}
+            "/api/v1/enterprise/auth/refresh", json={"refresh_token": "invalid.token.here"}
         )
 
         assert response.status_code == 401
@@ -280,9 +234,7 @@ class TestRefreshTokenEndpoint:
 
     @pytest.mark.asyncio
     async def test_refresh_token_inactive_user(
-        self,
-        client: AsyncClient,
-        test_user_inactive: EnterpriseUser
+        self, client: AsyncClient, test_user_inactive: EnterpriseUser
     ):
         """Test token refresh for inactive user."""
         from enterprise.security import create_refresh_token
@@ -291,8 +243,7 @@ class TestRefreshTokenEndpoint:
         inactive_refresh_token = create_refresh_token(test_user_inactive.id)
 
         response = await client.post(
-            "/api/v1/enterprise/auth/refresh",
-            json={"refresh_token": inactive_refresh_token}
+            "/api/v1/enterprise/auth/refresh", json={"refresh_token": inactive_refresh_token}
         )
 
         assert response.status_code == 403
@@ -304,15 +255,11 @@ class TestLogoutEndpoint:
     """Test POST /api/v1/enterprise/auth/logout endpoint."""
 
     @pytest.mark.asyncio
-    async def test_logout_success(
-        self,
-        client: AsyncClient,
-        admin_access_token: str
-    ):
+    async def test_logout_success(self, client: AsyncClient, admin_access_token: str):
         """Test successful logout."""
         response = await client.post(
             "/api/v1/enterprise/auth/logout",
-            headers={"Authorization": f"Bearer {admin_access_token}"}
+            headers={"Authorization": f"Bearer {admin_access_token}"},
         )
 
         assert response.status_code == 200
@@ -330,8 +277,7 @@ class TestLogoutEndpoint:
     async def test_logout_with_invalid_token(self, client: AsyncClient):
         """Test logout with invalid token."""
         response = await client.post(
-            "/api/v1/enterprise/auth/logout",
-            headers={"Authorization": "Bearer invalid.token.here"}
+            "/api/v1/enterprise/auth/logout", headers={"Authorization": "Bearer invalid.token.here"}
         )
 
         assert response.status_code == 401
@@ -342,15 +288,11 @@ class TestGetCurrentUserEndpoint:
 
     @pytest.mark.asyncio
     async def test_get_current_user_success(
-        self,
-        client: AsyncClient,
-        admin_access_token: str,
-        test_user_admin: EnterpriseUser
+        self, client: AsyncClient, admin_access_token: str, test_user_admin: EnterpriseUser
     ):
         """Test successful retrieval of current user info."""
         response = await client.get(
-            "/api/v1/enterprise/auth/me",
-            headers={"Authorization": f"Bearer {admin_access_token}"}
+            "/api/v1/enterprise/auth/me", headers={"Authorization": f"Bearer {admin_access_token}"}
         )
 
         assert response.status_code == 200
@@ -383,23 +325,18 @@ class TestGetCurrentUserEndpoint:
     async def test_get_current_user_with_invalid_token(self, client: AsyncClient):
         """Test /me endpoint with invalid token."""
         response = await client.get(
-            "/api/v1/enterprise/auth/me",
-            headers={"Authorization": "Bearer invalid.token.here"}
+            "/api/v1/enterprise/auth/me", headers={"Authorization": "Bearer invalid.token.here"}
         )
 
         assert response.status_code == 401
 
     @pytest.mark.asyncio
     async def test_get_current_user_member_permissions(
-        self,
-        client: AsyncClient,
-        member_access_token: str,
-        test_user_member: EnterpriseUser
+        self, client: AsyncClient, member_access_token: str, test_user_member: EnterpriseUser
     ):
         """Test /me endpoint returns correct permissions for member user."""
         response = await client.get(
-            "/api/v1/enterprise/auth/me",
-            headers={"Authorization": f"Bearer {member_access_token}"}
+            "/api/v1/enterprise/auth/me", headers={"Authorization": f"Bearer {member_access_token}"}
         )
 
         assert response.status_code == 200

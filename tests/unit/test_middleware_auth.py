@@ -11,7 +11,7 @@ from enterprise.middleware.auth import (
     get_current_active_user,
     require_permissions,
     require_org_admin,
-    OrganizationAccessChecker
+    OrganizationAccessChecker,
 )
 from enterprise.models import EnterpriseUser
 
@@ -70,7 +70,9 @@ class TestRequirePermissions:
         assert "teams:create" in exc_info.value.detail
 
     @pytest.mark.asyncio
-    async def test_user_with_partial_permissions_raises_exception(self, test_user_member: EnterpriseUser):
+    async def test_user_with_partial_permissions_raises_exception(
+        self, test_user_member: EnterpriseUser
+    ):
         """Test that user with only some permissions raises HTTPException."""
         # Member has "teams:read" but not "teams:create"
         checker = require_permissions("teams:read", "teams:create")
@@ -107,16 +109,13 @@ class TestOrganizationAccessChecker:
         """Test that user with matching organization ID passes."""
         checker = OrganizationAccessChecker()
         result = checker(
-            organization_id=test_user_admin.organization_id,
-            current_user=test_user_admin
+            organization_id=test_user_admin.organization_id, current_user=test_user_admin
         )
 
         assert result == test_user_admin
 
     def test_user_with_different_org_raises_exception(
-        self,
-        test_user_admin: EnterpriseUser,
-        test_organization
+        self, test_user_admin: EnterpriseUser, test_organization
     ):
         """Test that user with different organization raises HTTPException."""
         from uuid import uuid4
@@ -125,10 +124,7 @@ class TestOrganizationAccessChecker:
         different_org_id = uuid4()  # Different from test_user_admin.organization_id
 
         with pytest.raises(HTTPException) as exc_info:
-            checker(
-                organization_id=different_org_id,
-                current_user=test_user_admin
-            )
+            checker(organization_id=different_org_id, current_user=test_user_admin)
 
         assert exc_info.value.status_code == 403
         assert "You do not belong to this organization" in exc_info.value.detail
