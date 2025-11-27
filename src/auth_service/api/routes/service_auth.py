@@ -9,7 +9,8 @@ from typing import List
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
 
-from auth_service.domain.services.service_token_manager import get_service_token_manager
+from auth_service.domain.services.service_token_manager import \
+    get_service_token_manager
 
 logger = logging.getLogger(__name__)
 

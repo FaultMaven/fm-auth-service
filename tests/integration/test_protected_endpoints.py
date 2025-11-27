@@ -2,9 +2,10 @@
 Integration tests for protected API endpoints (RBAC and multi-tenancy).
 """
 
+from uuid import uuid4
+
 import pytest
 from httpx import AsyncClient
-from uuid import uuid4
 
 from enterprise.models import EnterpriseUser, Organization
 

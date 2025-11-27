@@ -2,14 +2,14 @@
 Security tests for authentication and authorization bypass attempts.
 """
 
+from uuid import uuid4
+
 import pytest
 from httpx import AsyncClient
 from jose import jwt
-from uuid import uuid4
 
-from enterprise.models import EnterpriseUser, Organization
 from enterprise.config.settings import get_settings
-
+from enterprise.models import EnterpriseUser, Organization
 
 settings = get_settings()
 
@@ -252,6 +252,7 @@ class TestTokenExpiration:
     ):
         """Test that expired tokens are rejected."""
         from datetime import datetime, timedelta
+
         from enterprise.security import create_access_token
 
         # Create token that's already expired

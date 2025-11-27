@@ -23,14 +23,16 @@ Security Considerations:
 """
 
 import hashlib
-import uuid
 import json
 import logging
-from datetime import datetime, timezone, timedelta
-from typing import Optional, List
+import uuid
+from datetime import datetime, timedelta, timezone
+from typing import List, Optional
+
 from redis.asyncio import Redis
 
-from auth_service.domain.models import DevUser, AuthToken, TokenStatus, TokenValidationResult
+from auth_service.domain.models import (AuthToken, DevUser, TokenStatus,
+                                        TokenValidationResult)
 
 logger = logging.getLogger(__name__)
 

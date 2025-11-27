@@ -21,12 +21,13 @@ Storage Schema:
 - auth:email:{email} -> {user_id}
 """
 
-import uuid
 import json
-import re
 import logging
+import re
+import uuid
 from datetime import datetime, timezone
-from typing import Optional, List
+from typing import List, Optional
+
 from redis.asyncio import Redis
 
 from auth_service.domain.models import DevUser

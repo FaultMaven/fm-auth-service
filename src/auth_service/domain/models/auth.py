@@ -13,8 +13,8 @@ Key Components:
 
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Optional
 from enum import Enum
+from typing import Optional
 
 
 def parse_utc_timestamp(timestamp_str: str) -> datetime:

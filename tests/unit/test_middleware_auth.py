@@ -6,13 +6,10 @@ import pytest
 from fastapi import HTTPException
 from fastapi.security import HTTPAuthorizationCredentials
 
-from enterprise.middleware.auth import (
-    get_current_user,
-    get_current_active_user,
-    require_permissions,
-    require_org_admin,
-    OrganizationAccessChecker,
-)
+from enterprise.middleware.auth import (OrganizationAccessChecker,
+                                        get_current_active_user,
+                                        get_current_user, require_org_admin,
+                                        require_permissions)
 from enterprise.models import EnterpriseUser
 
 

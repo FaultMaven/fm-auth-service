@@ -1,15 +1,13 @@
 """Unit tests for authentication models"""
 
+from datetime import datetime, timedelta, timezone
+
 import pytest
-from datetime import datetime, timezone, timedelta
-from auth_service.domain.models import (
-    DevUser,
-    AuthToken,
-    TokenStatus,
-    TokenValidationResult,
-    to_json_compatible,
-    parse_utc_timestamp,
-)
+
+from auth_service.domain.models import (AuthToken, DevUser, TokenStatus,
+                                        TokenValidationResult,
+                                        parse_utc_timestamp,
+                                        to_json_compatible)
 
 
 class TestDevUser:

@@ -6,7 +6,9 @@ user storage, and caching operations.
 
 import logging
 from typing import Optional
+
 import redis.asyncio as redis
+
 from auth_service.config.settings import get_settings
 
 logger = logging.getLogger(__name__)
