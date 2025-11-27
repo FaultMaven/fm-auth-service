@@ -23,34 +23,40 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Cache pip packages
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: latest
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Cache Poetry dependencies
         uses: actions/cache@v3
         with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          path: .venv
+          key: ${{ runner.os }}-poetry-${{ hashFiles('poetry.lock') }}
           restore-keys: |
-            ${{ runner.os }}-pip-
+            ${{ runner.os }}-poetry-
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install black flake8 isort mypy bandit
-          pip install -r requirements.txt
+          poetry install --no-interaction --no-root
+          poetry run pip install black flake8 isort mypy bandit
 
       - name: Run Black (code formatting)
-        run: black --check --diff enterprise/ tests/
+        run: poetry run black --check --diff src/auth_service tests/
 
       - name: Run isort (import sorting)
-        run: isort --check-only --diff enterprise/ tests/
+        run: poetry run isort --check-only --diff src/auth_service tests/
 
       - name: Run Flake8 (linting)
-        run: flake8 enterprise/ tests/ --max-line-length=100 --extend-ignore=E203,W503
+        run: poetry run flake8 src/auth_service tests/ --max-line-length=100 --extend-ignore=E203,W503
 
       - name: Run MyPy (type checking)
-        run: mypy enterprise/ --ignore-missing-imports
+        run: poetry run mypy src/auth_service --ignore-missing-imports
 
       - name: Run Bandit (security linting)
-        run: bandit -r enterprise/ -ll
+        run: poetry run bandit -r src/auth_service -ll
 
   # Unit and integration tests
   test:
@@ -92,19 +98,25 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Cache pip packages
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: latest
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Cache Poetry dependencies
         uses: actions/cache@v3
         with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          path: .venv
+          key: ${{ runner.os }}-poetry-${{ hashFiles('poetry.lock') }}
           restore-keys: |
-            ${{ runner.os }}-pip-
+            ${{ runner.os }}-poetry-
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install pytest pytest-asyncio pytest-cov pytest-html
+          poetry install --no-interaction --no-root
+          poetry run pip install pytest pytest-asyncio pytest-cov pytest-html
 
       - name: Run unit tests
         env:
@@ -117,8 +129,8 @@ jobs:
           REDIS_PORT: 6379
           JWT_SECRET_KEY: test-secret-key-for-ci-only
         run: |
-          pytest -v -m unit \
-            --cov=enterprise \
+          poetry run pytest -v -m unit \
+            --cov=src/auth_service \
             --cov-report=xml \
             --cov-report=html \
             --cov-report=term-missing \
@@ -135,8 +147,8 @@ jobs:
           REDIS_PORT: 6379
           JWT_SECRET_KEY: test-secret-key-for-ci-only
         run: |
-          pytest -v -m integration \
-            --cov=enterprise \
+          poetry run pytest -v -m integration \
+            --cov=src/auth_service \
             --cov-append \
             --cov-report=xml \
             --cov-report=term-missing
@@ -152,8 +164,8 @@ jobs:
           REDIS_PORT: 6379
           JWT_SECRET_KEY: test-secret-key-for-ci-only
         run: |
-          pytest -v -m security \
-            --cov=enterprise \
+          poetry run pytest -v -m security \
+            --cov=src/auth_service \
             --cov-append \
             --cov-report=xml \
             --cov-report=html \
