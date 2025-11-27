@@ -46,6 +46,12 @@ class Settings(BaseSettings):
     jwt_public_key_path: Optional[str] = None
     access_token_expire_minutes: int = 1440  # 24 hours
 
+    # Service-to-Service Authentication (RS256)
+    service_token_issuer: str = "fm-auth-service"
+    service_permissions_config_path: str = "/app/config/service-permissions.yml"
+    service_private_key_path: str = "/app/config/service-private-key.pem"
+    service_token_ttl_seconds: int = 3600  # 1 hour
+
     # CORS configuration
     cors_origins: list[str] = ["*"]
     cors_allow_credentials: bool = True

@@ -1,0 +1,46 @@
+# Service Permission Configuration
+# Defines which permissions each service has for service-to-service authentication
+
+services:
+  # Agent Service - needs to call case, knowledge, evidence services
+  fm-agent-service:
+    permissions:
+      - "case:read"
+      - "case:write"
+      - "knowledge:read"
+      - "evidence:read"
+      - "evidence:write"
+
+  # Case Service - currently doesn't call other services
+  fm-case-service:
+    permissions: []
+
+  # Knowledge Service - may need case read access
+  fm-knowledge-service:
+    permissions:
+      - "case:read"
+
+  # Evidence Service - needs case access
+  fm-evidence-service:
+    permissions:
+      - "case:read"
+      - "case:write"
+
+  # Session Service - needs case access
+  fm-session-service:
+    permissions:
+      - "case:read"
+      - "case:write"
+
+  # Investigation Service - needs broad access
+  fm-investigation-service:
+    permissions:
+      - "case:read"
+      - "case:write"
+      - "knowledge:read"
+      - "evidence:read"
+
+  # API Gateway - needs access to all services
+  fm-api-gateway:
+    permissions:
+      - "*"  # Wildcard permission for gateway
