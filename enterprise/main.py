@@ -4,11 +4,39 @@ Enterprise FastAPI application.
 Extends the PUBLIC base application with enterprise routes.
 """
 
+import logging
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from enterprise.api import auth_router, organizations_router, teams_router, users_router, sso_router
 from enterprise.database import close_db
+from enterprise.config.settings import get_settings
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
+logger = logging.getLogger(__name__)
+
+settings = get_settings()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Application lifespan events."""
+    # Startup
+    logger.info("FaultMaven Auth Service - Enterprise Edition starting...")
+    logger.info("API Documentation: http://localhost:8001/enterprise/docs")
+
+    yield
+
+    # Shutdown
+    logger.info("Shutting down...")
+    await close_db()
+
 
 # Create FastAPI app
 app = FastAPI(
@@ -17,12 +45,15 @@ app = FastAPI(
     version="1.0.0",
     docs_url="/enterprise/docs",
     redoc_url="/enterprise/redoc",
+    lifespan=lifespan,
 )
 
 # CORS middleware
+# WARNING: allow_origins=["*"] with allow_credentials=True is insecure for production.
+# Configure specific allowed origins in production environments.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure properly in production
+    allow_origins=["*"],  # TODO: Configure specific origins for production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -35,20 +66,6 @@ app.include_router(organizations_router)
 app.include_router(teams_router)
 app.include_router(users_router)
 app.include_router(sso_router)
-
-
-@app.on_event("startup")
-async def startup():
-    """Startup event handler."""
-    print("🚀 FaultMaven Auth Service - Enterprise Edition starting...")
-    print("📊 API Documentation: http://localhost:8001/enterprise/docs")
-
-
-@app.on_event("shutdown")
-async def shutdown():
-    """Shutdown event handler."""
-    print("👋 Shutting down...")
-    await close_db()
 
 
 @app.get("/")

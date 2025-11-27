@@ -4,7 +4,7 @@ Security utilities for enterprise authentication.
 Provides password hashing and verification using bcrypt, and JWT token generation.
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 from uuid import UUID
 
@@ -71,10 +71,11 @@ def create_access_token(
     Returns:
         Encoded JWT token string
     """
+    now = datetime.now(timezone.utc)
     if expires_delta:
-        expire = datetime.utcnow() + expires_delta
+        expire = now + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(
+        expire = now + timedelta(
             minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
         )
 
@@ -83,7 +84,7 @@ def create_access_token(
         "email": email,
         "org_id": str(organization_id),
         "exp": expire,  # Expiration time
-        "iat": datetime.utcnow(),  # Issued at
+        "iat": now,  # Issued at
         "type": "access"
     }
 
@@ -112,17 +113,18 @@ def create_refresh_token(
     Returns:
         Encoded JWT token string
     """
+    now = datetime.now(timezone.utc)
     if expires_delta:
-        expire = datetime.utcnow() + expires_delta
+        expire = now + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(
+        expire = now + timedelta(
             days=settings.REFRESH_TOKEN_EXPIRE_DAYS
         )
 
     to_encode = {
         "sub": str(user_id),
         "exp": expire,
-        "iat": datetime.utcnow(),
+        "iat": now,
         "type": "refresh"
     }
 

@@ -82,7 +82,10 @@ async def test_organization(test_db: AsyncSession) -> Organization:
 async def test_role_admin(test_db: AsyncSession, test_organization: Organization) -> Role:
     """Create admin role with all permissions."""
     role = Role(
-        organization_id=test_organization.id, name="Admin", description="Full access administrator"
+        organization_id=test_organization.id,
+        name="Admin",
+        slug="admin",
+        description="Full access administrator",
     )
     test_db.add(role)
     await test_db.flush()
@@ -119,7 +122,12 @@ async def test_role_admin(test_db: AsyncSession, test_organization: Organization
 @pytest_asyncio.fixture
 async def test_role_member(test_db: AsyncSession, test_organization: Organization) -> Role:
     """Create member role with limited permissions."""
-    role = Role(organization_id=test_organization.id, name="Member", description="Standard member")
+    role = Role(
+        organization_id=test_organization.id,
+        name="Member",
+        slug="member",
+        description="Standard member",
+    )
     test_db.add(role)
     await test_db.flush()
 

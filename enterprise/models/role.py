@@ -4,9 +4,14 @@ RBAC models for enterprise access control.
 Roles, permissions, and user-role assignments.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from uuid import UUID, uuid4
+
+
+def _utc_now() -> datetime:
+    """Return current UTC time (timezone-aware)."""
+    return datetime.now(timezone.utc)
 
 from sqlalchemy import String, DateTime, ForeignKey, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -50,11 +55,11 @@ class Role(Base):
     )
 
     # Timestamps
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utc_now, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
-        default=datetime.utcnow,
-        onupdate=datetime.utcnow,
+        default=_utc_now,
+        onupdate=_utc_now,
         nullable=False
     )
 
@@ -104,11 +109,11 @@ class Permission(Base):
     )
 
     # Permission details
-    resource: Mapped[str] = mapped_column(String(100), nullable=False)  # users, teams, cases, etc.
-    action: Mapped[str] = mapped_column(String(50), nullable=False)  # create, read, update, delete
+    name: Mapped[str] = mapped_column(String(100), nullable=False)  # e.g., "users:create", "teams:read"
+    description: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
 
     # Timestamps
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utc_now, nullable=False)
 
     # Relationships
     role: Mapped["Role"] = relationship(
@@ -117,12 +122,12 @@ class Permission(Base):
     )
 
     __table_args__ = (
-        # Unique constraint: one permission per role per resource+action
-        UniqueConstraint("role_id", "resource", "action", name="uq_role_resource_action"),
+        # Unique constraint: one permission per role per name
+        UniqueConstraint("role_id", "name", name="uq_role_permission_name"),
     )
 
     def __repr__(self) -> str:
-        return f"<Permission(role_id={self.role_id}, {self.action} {self.resource})>"
+        return f"<Permission(role_id={self.role_id}, name={self.name})>"
 
 
 class UserRole(Base):
@@ -156,7 +161,7 @@ class UserRole(Base):
     )
 
     # Timestamps
-    assigned_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    assigned_at: Mapped[datetime] = mapped_column(DateTime, default=_utc_now, nullable=False)
     assigned_by: Mapped[Optional[UUID]] = mapped_column(
         PG_UUID(as_uuid=True),
         nullable=True
