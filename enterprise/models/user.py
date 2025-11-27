@@ -13,9 +13,10 @@ def _utc_now() -> datetime:
     """Return current UTC time (timezone-aware)."""
     return datetime.now(timezone.utc)
 
-from sqlalchemy import String, DateTime, Boolean, ForeignKey
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from sqlalchemy import Boolean, DateTime, ForeignKey, String
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from enterprise.models.base import Base
 
@@ -36,29 +37,27 @@ class EnterpriseUser(Base):
     __tablename__ = "users"
 
     # Primary key
-    id: Mapped[UUID] = mapped_column(
-        PG_UUID(as_uuid=True),
-        primary_key=True,
-        default=uuid4
-    )
+    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid4)
 
     # Foreign keys (multi-tenancy)
     organization_id: Mapped[UUID] = mapped_column(
         PG_UUID(as_uuid=True),
         ForeignKey("organizations.id", ondelete="CASCADE"),
         nullable=False,
-        index=True
+        index=True,
     )
     team_id: Mapped[Optional[UUID]] = mapped_column(
         PG_UUID(as_uuid=True),
         ForeignKey("teams.id", ondelete="SET NULL"),
         nullable=True,
-        index=True
+        index=True,
     )
 
     # User credentials (same as PUBLIC)
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
-    hashed_password: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)  # None for SSO-only users
+    hashed_password: Mapped[Optional[str]] = mapped_column(
+        String(255), nullable=True
+    )  # None for SSO-only users
 
     # User profile
     full_name: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -66,7 +65,9 @@ class EnterpriseUser(Base):
     is_verified: Mapped[bool] = mapped_column(Boolean, default=False)
 
     # SSO tracking
-    sso_provider: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)  # saml, oauth, oidc
+    sso_provider: Mapped[Optional[str]] = mapped_column(
+        String(50), nullable=True
+    )  # saml, oauth, oidc
     sso_subject_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True, index=True)
 
     # Security
@@ -76,31 +77,18 @@ class EnterpriseUser(Base):
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_utc_now, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime,
-        default=_utc_now,
-        onupdate=_utc_now,
-        nullable=False
+        DateTime, default=_utc_now, onupdate=_utc_now, nullable=False
     )
     deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
     # Relationships
-    organization: Mapped["Organization"] = relationship(
-        "Organization",
-        back_populates="users"
-    )
-    team: Mapped[Optional["Team"]] = relationship(
-        "Team",
-        back_populates="users"
-    )
+    organization: Mapped["Organization"] = relationship("Organization", back_populates="users")
+    team: Mapped[Optional["Team"]] = relationship("Team", back_populates="users")
     roles: Mapped[list["UserRole"]] = relationship(
-        "UserRole",
-        back_populates="user",
-        cascade="all, delete-orphan"
+        "UserRole", back_populates="user", cascade="all, delete-orphan"
     )
     audit_logs: Mapped[list["AuditLog"]] = relationship(
-        "AuditLog",
-        back_populates="user",
-        cascade="all, delete-orphan"
+        "AuditLog", back_populates="user", cascade="all, delete-orphan"
     )
 
     def __repr__(self) -> str:

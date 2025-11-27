@@ -5,7 +5,7 @@ Enterprise extensions for the FaultMaven authentication microservice.
 Extends the PUBLIC open-source foundation with enterprise features.
 """
 
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
 
 setup(
     name="fm-auth-service-enterprise",
@@ -19,20 +19,15 @@ setup(
         "psycopg2-binary>=2.9.9",
         "asyncpg>=0.29.0",
         "sqlalchemy-utils>=0.41.1",
-
         # Database migrations
         "alembic>=1.13.0",
-
         # SSO/SAML support
         "python3-saml>=1.16.0",
-
         # Multi-tenancy (custom implementation)
         # Custom multi-tenancy implementation - no external package needed
-
         # Additional security
         "python-jose[cryptography]>=3.3.0",
         "bcrypt>=4.1.0",
-
         # Monitoring and observability
         "sentry-sdk[fastapi]>=1.39.0",
     ],

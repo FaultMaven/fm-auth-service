@@ -13,6 +13,8 @@ from enterprise.middleware.auth import (
 )
 from enterprise.models import EnterpriseUser
 
+pytestmark = pytest.mark.unit
+
 
 class TestGetCurrentActiveUser:
     """Test get_current_active_user function."""

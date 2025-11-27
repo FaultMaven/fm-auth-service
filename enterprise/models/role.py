@@ -13,9 +13,10 @@ def _utc_now() -> datetime:
     """Return current UTC time (timezone-aware)."""
     return datetime.now(timezone.utc)
 
-from sqlalchemy import String, DateTime, ForeignKey, Text, UniqueConstraint
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from sqlalchemy import DateTime, ForeignKey, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from enterprise.models.base import Base
 
@@ -32,11 +33,7 @@ class Role(Base):
     __tablename__ = "roles"
 
     # Primary key
-    id: Mapped[UUID] = mapped_column(
-        PG_UUID(as_uuid=True),
-        primary_key=True,
-        default=uuid4
-    )
+    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid4)
 
     # Role details
     name: Mapped[str] = mapped_column(String(100), nullable=False)
@@ -51,28 +48,21 @@ class Role(Base):
         PG_UUID(as_uuid=True),
         ForeignKey("organizations.id", ondelete="CASCADE"),
         nullable=True,
-        index=True
+        index=True,
     )
 
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_utc_now, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime,
-        default=_utc_now,
-        onupdate=_utc_now,
-        nullable=False
+        DateTime, default=_utc_now, onupdate=_utc_now, nullable=False
     )
 
     # Relationships
     permissions: Mapped[list["Permission"]] = relationship(
-        "Permission",
-        back_populates="role",
-        cascade="all, delete-orphan"
+        "Permission", back_populates="role", cascade="all, delete-orphan"
     )
     user_roles: Mapped[list["UserRole"]] = relationship(
-        "UserRole",
-        back_populates="role",
-        cascade="all, delete-orphan"
+        "UserRole", back_populates="role", cascade="all, delete-orphan"
     )
 
     __table_args__ = (
@@ -94,32 +84,27 @@ class Permission(Base):
     __tablename__ = "permissions"
 
     # Primary key
-    id: Mapped[UUID] = mapped_column(
-        PG_UUID(as_uuid=True),
-        primary_key=True,
-        default=uuid4
-    )
+    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid4)
 
     # Foreign key
     role_id: Mapped[UUID] = mapped_column(
         PG_UUID(as_uuid=True),
         ForeignKey("roles.id", ondelete="CASCADE"),
         nullable=False,
-        index=True
+        index=True,
     )
 
     # Permission details
-    name: Mapped[str] = mapped_column(String(100), nullable=False)  # e.g., "users:create", "teams:read"
+    name: Mapped[str] = mapped_column(
+        String(100), nullable=False
+    )  # e.g., "users:create", "teams:read"
     description: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
 
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_utc_now, nullable=False)
 
     # Relationships
-    role: Mapped["Role"] = relationship(
-        "Role",
-        back_populates="permissions"
-    )
+    role: Mapped["Role"] = relationship("Role", back_populates="permissions")
 
     __table_args__ = (
         # Unique constraint: one permission per role per name
@@ -140,42 +125,31 @@ class UserRole(Base):
     __tablename__ = "user_roles"
 
     # Primary key
-    id: Mapped[UUID] = mapped_column(
-        PG_UUID(as_uuid=True),
-        primary_key=True,
-        default=uuid4
-    )
+    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid4)
 
     # Foreign keys
     user_id: Mapped[UUID] = mapped_column(
         PG_UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
-        index=True
+        index=True,
     )
     role_id: Mapped[UUID] = mapped_column(
         PG_UUID(as_uuid=True),
         ForeignKey("roles.id", ondelete="CASCADE"),
         nullable=False,
-        index=True
+        index=True,
     )
 
     # Timestamps
     assigned_at: Mapped[datetime] = mapped_column(DateTime, default=_utc_now, nullable=False)
     assigned_by: Mapped[Optional[UUID]] = mapped_column(
-        PG_UUID(as_uuid=True),
-        nullable=True
+        PG_UUID(as_uuid=True), nullable=True
     )  # User ID who assigned this role
 
     # Relationships
-    user: Mapped["EnterpriseUser"] = relationship(
-        "EnterpriseUser",
-        back_populates="roles"
-    )
-    role: Mapped["Role"] = relationship(
-        "Role",
-        back_populates="user_roles"
-    )
+    user: Mapped["EnterpriseUser"] = relationship("EnterpriseUser", back_populates="roles")
+    role: Mapped["Role"] = relationship("Role", back_populates="user_roles")
 
     __table_args__ = (
         # Unique constraint: user can only have a role once

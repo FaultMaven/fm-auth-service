@@ -13,9 +13,10 @@ def _utc_now() -> datetime:
     """Return current UTC time (timezone-aware)."""
     return datetime.now(timezone.utc)
 
-from sqlalchemy import String, DateTime, Boolean, Integer
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from sqlalchemy import Boolean, DateTime, Integer, String
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from enterprise.models.base import Base
 
@@ -31,18 +32,16 @@ class Organization(Base):
     __tablename__ = "organizations"
 
     # Primary key
-    id: Mapped[UUID] = mapped_column(
-        PG_UUID(as_uuid=True),
-        primary_key=True,
-        default=uuid4
-    )
+    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid4)
 
     # Organization details
     name: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     slug: Mapped[str] = mapped_column(String(100), unique=True, nullable=False, index=True)
 
     # Subscription/billing
-    plan: Mapped[str] = mapped_column(String(50), default="trial")  # trial, starter, professional, enterprise
+    plan: Mapped[str] = mapped_column(
+        String(50), default="trial"
+    )  # trial, starter, professional, enterprise
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
 
     # Limits and quotas
@@ -56,28 +55,19 @@ class Organization(Base):
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_utc_now, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime,
-        default=_utc_now,
-        onupdate=_utc_now,
-        nullable=False
+        DateTime, default=_utc_now, onupdate=_utc_now, nullable=False
     )
     deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
     # Relationships
     teams: Mapped[list["Team"]] = relationship(
-        "Team",
-        back_populates="organization",
-        cascade="all, delete-orphan"
+        "Team", back_populates="organization", cascade="all, delete-orphan"
     )
     users: Mapped[list["EnterpriseUser"]] = relationship(
-        "EnterpriseUser",
-        back_populates="organization",
-        cascade="all, delete-orphan"
+        "EnterpriseUser", back_populates="organization", cascade="all, delete-orphan"
     )
     sso_configurations: Mapped[list["SSOConfiguration"]] = relationship(
-        "SSOConfiguration",
-        back_populates="organization",
-        cascade="all, delete-orphan"
+        "SSOConfiguration", back_populates="organization", cascade="all, delete-orphan"
     )
 
     def __repr__(self) -> str:

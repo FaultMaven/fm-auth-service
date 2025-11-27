@@ -8,9 +8,9 @@ from datetime import datetime, timezone
 from typing import Optional
 from uuid import UUID, uuid4
 
-from sqlalchemy import String, DateTime, ForeignKey, Text, Boolean, JSON
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from enterprise.models.base import Base
 
@@ -33,23 +33,21 @@ class SSOConfiguration(Base):
     __tablename__ = "sso_configurations"
 
     # Primary key
-    id: Mapped[UUID] = mapped_column(
-        PG_UUID(as_uuid=True),
-        primary_key=True,
-        default=uuid4
-    )
+    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid4)
 
     # Foreign key
     organization_id: Mapped[UUID] = mapped_column(
         PG_UUID(as_uuid=True),
         ForeignKey("organizations.id", ondelete="CASCADE"),
         nullable=False,
-        index=True
+        index=True,
     )
 
     # SSO provider details
     provider_type: Mapped[str] = mapped_column(String(50), nullable=False)  # saml, oauth, oidc
-    provider_name: Mapped[str] = mapped_column(String(255), nullable=False)  # "Okta", "Azure AD", etc.
+    provider_name: Mapped[str] = mapped_column(
+        String(255), nullable=False
+    )  # "Okta", "Azure AD", etc.
     is_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
 
     # SAML configuration (when provider_type = 'saml')
@@ -61,11 +59,15 @@ class SSOConfiguration(Base):
 
     # OAuth/OIDC configuration (when provider_type = 'oauth' or 'oidc')
     oauth_client_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
-    oauth_client_secret: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)  # Encrypted
+    oauth_client_secret: Mapped[Optional[str]] = mapped_column(
+        String(500), nullable=True
+    )  # Encrypted
     oauth_authorization_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     oauth_token_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     oauth_userinfo_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    oauth_scopes: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)  # Comma-separated
+    oauth_scopes: Mapped[Optional[str]] = mapped_column(
+        String(500), nullable=True
+    )  # Comma-separated
 
     # OIDC-specific
     oidc_issuer: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
@@ -76,25 +78,22 @@ class SSOConfiguration(Base):
     attribute_mapping: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
 
     # Additional configuration
-    auto_create_users: Mapped[bool] = mapped_column(Boolean, default=True)  # Auto-provision new users
+    auto_create_users: Mapped[bool] = mapped_column(
+        Boolean, default=True
+    )  # Auto-provision new users
     default_role_id: Mapped[Optional[UUID]] = mapped_column(
-        PG_UUID(as_uuid=True),
-        nullable=True
+        PG_UUID(as_uuid=True), nullable=True
     )  # Default role for auto-created users
 
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_utc_now, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime,
-        default=_utc_now,
-        onupdate=_utc_now,
-        nullable=False
+        DateTime, default=_utc_now, onupdate=_utc_now, nullable=False
     )
 
     # Relationships
     organization: Mapped["Organization"] = relationship(
-        "Organization",
-        back_populates="sso_configurations"
+        "Organization", back_populates="sso_configurations"
     )
 
     def __repr__(self) -> str:

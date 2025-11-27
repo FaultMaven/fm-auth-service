@@ -11,7 +11,15 @@ from uuid import uuid4
 from sqlalchemy import select
 
 from enterprise.database import AsyncSessionLocal, init_db
-from enterprise.models import Organization, Team, EnterpriseUser, Role, Permission, UserRole, SSOConfiguration
+from enterprise.models import (
+    EnterpriseUser,
+    Organization,
+    Permission,
+    Role,
+    SSOConfiguration,
+    Team,
+    UserRole,
+)
 from enterprise.security import hash_password
 
 
@@ -38,7 +46,7 @@ async def seed_database():
             max_users=50,
             max_teams=10,
             contact_email="admin@acme.com",
-            contact_name="John Doe"
+            contact_name="John Doe",
         )
 
         techstart = Organization(
@@ -50,7 +58,7 @@ async def seed_database():
             max_users=10,
             max_teams=3,
             contact_email="info@techstart.io",
-            contact_name="Jane Smith"
+            contact_name="Jane Smith",
         )
 
         enterprise_co = Organization(
@@ -62,7 +70,7 @@ async def seed_database():
             max_users=200,
             max_teams=50,
             contact_email="admin@enterprise.co",
-            contact_name="Alice Johnson"
+            contact_name="Alice Johnson",
         )
 
         db.add_all([acme, techstart, enterprise_co])
@@ -78,7 +86,7 @@ async def seed_database():
             organization_id=acme.id,
             name="Engineering",
             slug="engineering",
-            description="Product development team"
+            description="Product development team",
         )
 
         acme_sales = Team(
@@ -86,7 +94,7 @@ async def seed_database():
             organization_id=acme.id,
             name="Sales",
             slug="sales",
-            description="Sales and customer success"
+            description="Sales and customer success",
         )
 
         techstart_dev = Team(
@@ -94,7 +102,7 @@ async def seed_database():
             organization_id=techstart.id,
             name="Development",
             slug="development",
-            description="Core development team"
+            description="Core development team",
         )
 
         enterprise_platform = Team(
@@ -102,7 +110,7 @@ async def seed_database():
             organization_id=enterprise_co.id,
             name="Platform Team",
             slug="platform",
-            description="Infrastructure and platform"
+            description="Infrastructure and platform",
         )
 
         db.add_all([acme_engineering, acme_sales, techstart_dev, enterprise_platform])
@@ -120,7 +128,7 @@ async def seed_database():
             slug="admin",
             description="Full system access",
             is_system_role=True,
-            organization_id=None
+            organization_id=None,
         )
 
         member_role = Role(
@@ -129,7 +137,7 @@ async def seed_database():
             slug="member",
             description="Standard member access",
             is_system_role=True,
-            organization_id=None
+            organization_id=None,
         )
 
         viewer_role = Role(
@@ -138,7 +146,7 @@ async def seed_database():
             slug="viewer",
             description="Read-only access",
             is_system_role=True,
-            organization_id=None
+            organization_id=None,
         )
 
         db.add_all([admin_role, member_role, viewer_role])
@@ -150,10 +158,16 @@ async def seed_database():
         # Create Permissions for Admin Role
         print("\n🔑 Creating permissions...")
         admin_permissions = [
-            Permission(id=uuid4(), role_id=admin_role.id, resource="organizations", action="create"),
+            Permission(
+                id=uuid4(), role_id=admin_role.id, resource="organizations", action="create"
+            ),
             Permission(id=uuid4(), role_id=admin_role.id, resource="organizations", action="read"),
-            Permission(id=uuid4(), role_id=admin_role.id, resource="organizations", action="update"),
-            Permission(id=uuid4(), role_id=admin_role.id, resource="organizations", action="delete"),
+            Permission(
+                id=uuid4(), role_id=admin_role.id, resource="organizations", action="update"
+            ),
+            Permission(
+                id=uuid4(), role_id=admin_role.id, resource="organizations", action="delete"
+            ),
             Permission(id=uuid4(), role_id=admin_role.id, resource="users", action="create"),
             Permission(id=uuid4(), role_id=admin_role.id, resource="users", action="read"),
             Permission(id=uuid4(), role_id=admin_role.id, resource="users", action="update"),
@@ -193,7 +207,7 @@ async def seed_database():
             full_name="John Doe",
             hashed_password=hash_password("password123"),
             is_active=True,
-            is_verified=True
+            is_verified=True,
         )
 
         acme_user = EnterpriseUser(
@@ -204,7 +218,7 @@ async def seed_database():
             full_name="Bob Johnson",
             hashed_password=hash_password("password123"),
             is_active=True,
-            is_verified=True
+            is_verified=True,
         )
 
         # TechStart users
@@ -216,7 +230,7 @@ async def seed_database():
             full_name="Jane Smith",
             hashed_password=hash_password("password123"),
             is_active=True,
-            is_verified=True
+            is_verified=True,
         )
 
         # Enterprise Co users (SSO user - no password)
@@ -230,7 +244,7 @@ async def seed_database():
             is_active=True,
             is_verified=True,
             sso_provider="saml",
-            sso_subject_id="alice.johnson@enterprise.co"
+            sso_subject_id="alice.johnson@enterprise.co",
         )
 
         db.add_all([acme_admin, acme_user, techstart_admin, enterprise_sso_user])
@@ -270,10 +284,10 @@ async def seed_database():
                 "email": "emailAddress",
                 "full_name": "displayName",
                 "first_name": "firstName",
-                "last_name": "lastName"
+                "last_name": "lastName",
             },
             auto_create_users=True,
-            default_role_id=member_role.id
+            default_role_id=member_role.id,
         )
 
         db.add(sso_config)

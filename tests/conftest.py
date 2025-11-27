@@ -14,16 +14,23 @@ from typing import AsyncGenerator, Generator
 import pytest
 import pytest_asyncio
 from httpx import AsyncClient
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.orm import selectinload
 from sqlalchemy.pool import NullPool
 
 from enterprise.database import Base, get_db
 from enterprise.main import app
+
+# Import all models to ensure they're registered with Base.metadata before create_all()
 from enterprise.models import EnterpriseUser, Organization, Permission, Role, Team
+from enterprise.models.audit import AuditLog  # noqa: F401
+from enterprise.models.role import UserRole  # noqa: F401
+from enterprise.models.sso import SSOConfiguration  # noqa: F401
 from enterprise.security import create_access_token, create_refresh_token, hash_password
 
-# Test database URL (use in-memory SQLite for tests)
-TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
+# Test database URL (use file-based SQLite for tests to ensure table persistence)
+TEST_DATABASE_URL = "sqlite+aiosqlite:///test_db.sqlite"
 
 
 @pytest.fixture(scope="session")
@@ -37,6 +44,12 @@ def event_loop() -> Generator:
 @pytest_asyncio.fixture
 async def test_engine():
     """Create test database engine."""
+    import os
+
+    # Remove old test database if exists
+    if os.path.exists("test_db.sqlite"):
+        os.remove("test_db.sqlite")
+
     engine = create_async_engine(TEST_DATABASE_URL, poolclass=NullPool, echo=False)
 
     async with engine.begin() as conn:
@@ -48,6 +61,10 @@ async def test_engine():
         await conn.run_sync(Base.metadata.drop_all)
 
     await engine.dispose()
+
+    # Clean up test database file
+    if os.path.exists("test_db.sqlite"):
+        os.remove("test_db.sqlite")
 
 
 @pytest_asyncio.fixture
@@ -90,29 +107,25 @@ async def test_role_admin(test_db: AsyncSession, test_organization: Organization
     test_db.add(role)
     await test_db.flush()
 
-    # Create permissions
-    permissions = [
-        Permission(name="organizations:create", description="Create organizations"),
-        Permission(name="organizations:read", description="Read organizations"),
-        Permission(name="organizations:update", description="Update organizations"),
-        Permission(name="organizations:delete", description="Delete organizations"),
-        Permission(name="teams:create", description="Create teams"),
-        Permission(name="teams:read", description="Read teams"),
-        Permission(name="teams:update", description="Update teams"),
-        Permission(name="teams:delete", description="Delete teams"),
-        Permission(name="users:create", description="Create users"),
-        Permission(name="users:read", description="Read users"),
-        Permission(name="users:update", description="Update users"),
-        Permission(name="users:delete", description="Delete users"),
+    # Create permissions with role_id (required foreign key)
+    permission_names = [
+        ("organizations:create", "Create organizations"),
+        ("organizations:read", "Read organizations"),
+        ("organizations:update", "Update organizations"),
+        ("organizations:delete", "Delete organizations"),
+        ("teams:create", "Create teams"),
+        ("teams:read", "Read teams"),
+        ("teams:update", "Update teams"),
+        ("teams:delete", "Delete teams"),
+        ("users:create", "Create users"),
+        ("users:read", "Read users"),
+        ("users:update", "Update users"),
+        ("users:delete", "Delete users"),
     ]
 
-    for perm in permissions:
+    for name, description in permission_names:
+        perm = Permission(role_id=role.id, name=name, description=description)
         test_db.add(perm)
-
-    await test_db.flush()
-
-    # Associate permissions with role
-    role.permissions = permissions
 
     await test_db.commit()
     await test_db.refresh(role)
@@ -131,18 +144,15 @@ async def test_role_member(test_db: AsyncSession, test_organization: Organizatio
     test_db.add(role)
     await test_db.flush()
 
-    # Create limited permissions
-    permissions = [
-        Permission(name="teams:read", description="Read teams"),
-        Permission(name="users:read", description="Read users"),
+    # Create limited permissions with role_id (required foreign key)
+    permission_names = [
+        ("teams:read", "Read teams"),
+        ("users:read", "Read users"),
     ]
 
-    for perm in permissions:
+    for name, description in permission_names:
+        perm = Permission(role_id=role.id, name=name, description=description)
         test_db.add(perm)
-
-    await test_db.flush()
-
-    role.permissions = permissions
 
     await test_db.commit()
     await test_db.refresh(role)
@@ -181,12 +191,26 @@ async def test_user_admin(
     test_db.add(user)
     await test_db.flush()
 
-    # Assign admin role
-    user.roles = [test_role_admin]
+    # Assign admin role via UserRole junction table
+    user_role_obj = UserRole(user_id=user.id, role_id=test_role_admin.id)
+    test_db.add(user_role_obj)
 
     await test_db.commit()
-    await test_db.refresh(user)
-    return user
+
+    # Re-fetch user with eager loading of relationships
+    stmt = (
+        select(EnterpriseUser)
+        .options(
+            selectinload(EnterpriseUser.organization),
+            selectinload(EnterpriseUser.team),
+            selectinload(EnterpriseUser.roles)
+            .selectinload(UserRole.role)
+            .selectinload(Role.permissions),
+        )
+        .where(EnterpriseUser.id == user.id)
+    )
+    result = await test_db.execute(stmt)
+    return result.scalar_one()
 
 
 @pytest_asyncio.fixture
@@ -206,12 +230,26 @@ async def test_user_member(
     test_db.add(user)
     await test_db.flush()
 
-    # Assign member role
-    user.roles = [test_role_member]
+    # Assign member role via UserRole junction table
+    user_role_obj = UserRole(user_id=user.id, role_id=test_role_member.id)
+    test_db.add(user_role_obj)
 
     await test_db.commit()
-    await test_db.refresh(user)
-    return user
+
+    # Re-fetch user with eager loading of relationships
+    stmt = (
+        select(EnterpriseUser)
+        .options(
+            selectinload(EnterpriseUser.organization),
+            selectinload(EnterpriseUser.team),
+            selectinload(EnterpriseUser.roles)
+            .selectinload(UserRole.role)
+            .selectinload(Role.permissions),
+        )
+        .where(EnterpriseUser.id == user.id)
+    )
+    result = await test_db.execute(stmt)
+    return result.scalar_one()
 
 
 @pytest_asyncio.fixture

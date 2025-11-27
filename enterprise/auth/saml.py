@@ -57,28 +57,29 @@ class SAMLAuthProvider:
                 "entityId": f"https://app.faultmaven.ai/saml/metadata/{self.sso_config.organization_id}",
                 "assertionConsumerService": {
                     "url": f"https://app.faultmaven.ai/saml/acs/{self.sso_config.organization_id}",
-                    "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"
+                    "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST",
                 },
                 "singleLogoutService": {
                     "url": f"https://app.faultmaven.ai/saml/sls/{self.sso_config.organization_id}",
-                    "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect"
+                    "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect",
                 },
-                "NameIDFormat": self.sso_config.saml_name_id_format or "urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress",
+                "NameIDFormat": self.sso_config.saml_name_id_format
+                or "urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress",
                 "x509cert": "",  # SP certificate (optional for FaultMaven)
-                "privateKey": ""  # SP private key (optional for FaultMaven)
+                "privateKey": "",  # SP private key (optional for FaultMaven)
             },
             "idp": {
                 "entityId": self.sso_config.saml_entity_id,
                 "singleSignOnService": {
                     "url": self.sso_config.saml_sso_url,
-                    "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect"
+                    "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect",
                 },
                 "singleLogoutService": {
                     "url": self.sso_config.saml_slo_url or "",
-                    "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect"
+                    "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect",
                 },
-                "x509cert": self.sso_config.saml_x509_cert
-            }
+                "x509cert": self.sso_config.saml_x509_cert,
+            },
         }
 
     def get_login_url(self, request_data: Dict) -> str:
@@ -143,7 +144,7 @@ class SAMLAuthProvider:
             "email": "email",
             "full_name": "displayName",
             "first_name": "firstName",
-            "last_name": "lastName"
+            "last_name": "lastName",
         }
 
         # Use custom mapping if configured
@@ -152,7 +153,7 @@ class SAMLAuthProvider:
         user_data = {
             "sso_subject_id": name_id,
             "sso_provider": "saml",
-            "organization_id": str(self.sso_config.organization_id)
+            "organization_id": str(self.sso_config.organization_id),
         }
 
         # Map each field

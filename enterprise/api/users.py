@@ -8,18 +8,18 @@ from typing import List, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
 from pydantic import BaseModel, EmailStr, Field
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from enterprise.models import EnterpriseUser, Organization, Team
-from enterprise.security import hash_password
 from enterprise.middleware.auth import (
     get_current_active_user,
-    require_permissions,
+    require_org_access,
     require_org_admin,
-    require_org_access
+    require_permissions,
 )
+from enterprise.models import EnterpriseUser, Organization, Team
+from enterprise.security import hash_password
 
 router = APIRouter(prefix="/api/v1/enterprise/users", tags=["users"])
 
@@ -27,6 +27,7 @@ router = APIRouter(prefix="/api/v1/enterprise/users", tags=["users"])
 # Pydantic schemas
 class UserCreate(BaseModel):
     """Schema for creating a new user."""
+
     organization_id: UUID
     team_id: Optional[UUID] = None
     email: EmailStr
@@ -36,6 +37,7 @@ class UserCreate(BaseModel):
 
 class UserUpdate(BaseModel):
     """Schema for updating a user."""
+
     team_id: Optional[UUID] = None
     full_name: Optional[str] = Field(None, min_length=1, max_length=255)
     is_active: Optional[bool] = None
@@ -43,6 +45,7 @@ class UserUpdate(BaseModel):
 
 class UserResponse(BaseModel):
     """Schema for user response."""
+
     id: UUID
     organization_id: UUID
     team_id: Optional[UUID]
@@ -64,7 +67,7 @@ from enterprise.database import get_db
 async def create_user(
     user: UserCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: EnterpriseUser = Depends(require_permissions("users:create"))
+    current_user: EnterpriseUser = Depends(require_permissions("users:create")),
 ):
     """
     Create a new user in an organization.
@@ -86,14 +89,13 @@ async def create_user(
     if current_user.organization_id != user.organization_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied: You do not belong to this organization"
+            detail="Access denied: You do not belong to this organization",
         )
 
     # Verify organization exists
     org_result = await db.execute(
         select(Organization).where(
-            Organization.id == user.organization_id,
-            Organization.deleted_at.is_(None)
+            Organization.id == user.organization_id, Organization.deleted_at.is_(None)
         )
     )
     organization = org_result.scalar_one_or_none()
@@ -101,14 +103,14 @@ async def create_user(
     if not organization:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Organization {user.organization_id} not found"
+            detail=f"Organization {user.organization_id} not found",
         )
 
     # Check user limit
     users_result = await db.execute(
         select(EnterpriseUser).where(
             EnterpriseUser.organization_id == user.organization_id,
-            EnterpriseUser.deleted_at.is_(None)
+            EnterpriseUser.deleted_at.is_(None),
         )
     )
     user_count = len(users_result.scalars().all())
@@ -116,14 +118,13 @@ async def create_user(
     if user_count >= organization.max_users:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"Organization has reached maximum users limit ({organization.max_users})"
+            detail=f"Organization has reached maximum users limit ({organization.max_users})",
         )
 
     # Check email uniqueness (global)
     email_result = await db.execute(
         select(EnterpriseUser).where(
-            EnterpriseUser.email == user.email,
-            EnterpriseUser.deleted_at.is_(None)
+            EnterpriseUser.email == user.email, EnterpriseUser.deleted_at.is_(None)
         )
     )
     existing = email_result.scalar_one_or_none()
@@ -131,7 +132,7 @@ async def create_user(
     if existing:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=f"User with email '{user.email}' already exists"
+            detail=f"User with email '{user.email}' already exists",
         )
 
     # Verify team exists if provided
@@ -140,7 +141,7 @@ async def create_user(
             select(Team).where(
                 Team.id == user.team_id,
                 Team.organization_id == user.organization_id,
-                Team.deleted_at.is_(None)
+                Team.deleted_at.is_(None),
             )
         )
         team = team_result.scalar_one_or_none()
@@ -148,7 +149,7 @@ async def create_user(
         if not team:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Team {user.team_id} not found in organization"
+                detail=f"Team {user.team_id} not found in organization",
             )
 
     # Create user
@@ -174,7 +175,7 @@ async def list_organization_users(
     skip: int = 0,
     limit: int = 100,
     db: AsyncSession = Depends(get_db),
-    current_user: EnterpriseUser = Depends(require_org_access)
+    current_user: EnterpriseUser = Depends(require_org_access),
 ):
     """
     List users in an organization.
@@ -194,8 +195,7 @@ async def list_organization_users(
         List of users
     """
     query = select(EnterpriseUser).where(
-        EnterpriseUser.organization_id == organization_id,
-        EnterpriseUser.deleted_at.is_(None)
+        EnterpriseUser.organization_id == organization_id, EnterpriseUser.deleted_at.is_(None)
     )
 
     if team_id:
@@ -215,7 +215,7 @@ async def list_organization_users(
 async def get_user(
     user_id: UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: EnterpriseUser = Depends(get_current_active_user)
+    current_user: EnterpriseUser = Depends(get_current_active_user),
 ):
     """
     Get user by ID.
@@ -235,23 +235,21 @@ async def get_user(
     """
     result = await db.execute(
         select(EnterpriseUser).where(
-            EnterpriseUser.id == user_id,
-            EnterpriseUser.deleted_at.is_(None)
+            EnterpriseUser.id == user_id, EnterpriseUser.deleted_at.is_(None)
         )
     )
     user = result.scalar_one_or_none()
 
     if not user:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"User {user_id} not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"User {user_id} not found"
         )
 
     # Multi-tenant isolation: verify both users belong to the same organization
     if current_user.organization_id != user.organization_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied: User does not belong to your organization"
+            detail="Access denied: User does not belong to your organization",
         )
 
     return user
@@ -262,7 +260,7 @@ async def update_user(
     user_id: UUID,
     user_update: UserUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: EnterpriseUser = Depends(require_permissions("users:update"))
+    current_user: EnterpriseUser = Depends(require_permissions("users:update")),
 ):
     """
     Update user.
@@ -283,23 +281,21 @@ async def update_user(
     """
     result = await db.execute(
         select(EnterpriseUser).where(
-            EnterpriseUser.id == user_id,
-            EnterpriseUser.deleted_at.is_(None)
+            EnterpriseUser.id == user_id, EnterpriseUser.deleted_at.is_(None)
         )
     )
     user = result.scalar_one_or_none()
 
     if not user:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"User {user_id} not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"User {user_id} not found"
         )
 
     # Multi-tenant isolation: verify both users belong to the same organization
     if current_user.organization_id != user.organization_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied: User does not belong to your organization"
+            detail="Access denied: User does not belong to your organization",
         )
 
     # Verify team if being updated
@@ -309,7 +305,7 @@ async def update_user(
             select(Team).where(
                 Team.id == update_data["team_id"],
                 Team.organization_id == user.organization_id,
-                Team.deleted_at.is_(None)
+                Team.deleted_at.is_(None),
             )
         )
         team = team_result.scalar_one_or_none()
@@ -317,7 +313,7 @@ async def update_user(
         if not team:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Team {update_data['team_id']} not found in user's organization"
+                detail=f"Team {update_data['team_id']} not found in user's organization",
             )
 
     # Update fields
@@ -334,7 +330,7 @@ async def update_user(
 async def delete_user(
     user_id: UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: EnterpriseUser = Depends(require_permissions("users:delete"))
+    current_user: EnterpriseUser = Depends(require_permissions("users:delete")),
 ):
     """
     Soft delete user.
@@ -351,23 +347,21 @@ async def delete_user(
     """
     result = await db.execute(
         select(EnterpriseUser).where(
-            EnterpriseUser.id == user_id,
-            EnterpriseUser.deleted_at.is_(None)
+            EnterpriseUser.id == user_id, EnterpriseUser.deleted_at.is_(None)
         )
     )
     user = result.scalar_one_or_none()
 
     if not user:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"User {user_id} not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"User {user_id} not found"
         )
 
     # Multi-tenant isolation: verify both users belong to the same organization
     if current_user.organization_id != user.organization_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied: User does not belong to your organization"
+            detail="Access denied: User does not belong to your organization",
         )
 
     user.soft_delete()
