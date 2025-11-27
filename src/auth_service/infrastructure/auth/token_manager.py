@@ -27,7 +27,7 @@ import json
 import logging
 import uuid
 from datetime import datetime, timedelta, timezone
-from typing import List, Optional
+from typing import Awaitable, List, Optional, cast
 
 from redis.asyncio import Redis
 
@@ -355,14 +355,13 @@ class DevTokenManager:
             logger.warning(f"Failed to update token usage: {e}")
 
     # Redis async wrapper methods
-    async def _redis_set(self, key: str, value: str, expiry: int = None) -> None:
+    async def _redis_set(self, key: str, value: str, expiry: Optional[int] = None) -> None:
         """Set Redis key with optional expiry"""
         try:
             if expiry:
-                result = await self.redis.setex(key, expiry, value)
+                await self.redis.setex(key, expiry, value)
             else:
-                result = await self.redis.set(key, value)
-            return result
+                await self.redis.set(key, value)
         except Exception as e:
             logger.error(f"Redis SET failed for key {key}: {e}")
             raise
@@ -386,14 +385,14 @@ class DevTokenManager:
     async def _redis_sadd(self, key: str, value: str) -> None:
         """Add to Redis set"""
         try:
-            return await self.redis.sadd(key, value)
+            await cast(Awaitable[int], self.redis.sadd(key, value))
         except Exception as e:
             logger.error(f"Redis SADD failed for key {key}: {e}")
 
     async def _redis_smembers(self, key: str) -> List[str]:
         """Get Redis set members"""
         try:
-            members = await self.redis.smembers(key)
+            members = await cast(Awaitable[set], self.redis.smembers(key))
             return [str(member) for member in members]
         except Exception as e:
             logger.error(f"Redis SMEMBERS failed for key {key}: {e}")
@@ -402,6 +401,6 @@ class DevTokenManager:
     async def _redis_expire(self, key: str, seconds: int) -> None:
         """Set Redis key expiration"""
         try:
-            return await self.redis.expire(key, seconds)
+            await self.redis.expire(key, seconds)
         except Exception as e:
             logger.error(f"Redis EXPIRE failed for key {key}: {e}")

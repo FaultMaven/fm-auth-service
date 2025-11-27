@@ -26,7 +26,7 @@ import logging
 import re
 import uuid
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import Awaitable, List, Optional, cast
 
 from redis.asyncio import Redis
 
@@ -144,7 +144,7 @@ class DevUserStore:
             return None
 
     async def create_user(
-        self, username: str, email: str = None, display_name: str = None
+        self, username: str, email: Optional[str] = None, display_name: Optional[str] = None
     ) -> DevUser:
         """Create new development user
 
@@ -406,21 +406,21 @@ class DevUserStore:
     async def _redis_sadd(self, key: str, value: str) -> None:
         """Add to Redis set"""
         try:
-            return await self.redis.sadd(key, value)
+            await cast(Awaitable[int], self.redis.sadd(key, value))
         except Exception as e:
             logger.error(f"Redis SADD failed for key {key}: {e}")
 
     async def _redis_srem(self, key: str, value: str) -> None:
         """Remove from Redis set"""
         try:
-            return await self.redis.srem(key, value)
+            await cast(Awaitable[int], self.redis.srem(key, value))
         except Exception as e:
             logger.error(f"Redis SREM failed for key {key}: {e}")
 
     async def _redis_smembers(self, key: str) -> List[str]:
         """Get Redis set members"""
         try:
-            members = await self.redis.smembers(key)
+            members = await cast(Awaitable[set], self.redis.smembers(key))
             return [str(member) for member in members]
         except Exception as e:
             logger.error(f"Redis SMEMBERS failed for key {key}: {e}")
@@ -429,7 +429,7 @@ class DevUserStore:
     async def _redis_scard(self, key: str) -> int:
         """Get Redis set cardinality"""
         try:
-            return await self.redis.scard(key)
+            return await cast(Awaitable[int], self.redis.scard(key))
         except Exception as e:
             logger.error(f"Redis SCARD failed for key {key}: {e}")
             return 0

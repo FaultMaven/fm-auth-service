@@ -5,7 +5,7 @@ Manages JWT token generation for service-to-service authentication.
 
 import logging
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import jwt
 import yaml
@@ -57,7 +57,7 @@ class ServiceTokenManager:
             raise ValueError(f"Cannot load permissions from {permissions_config_path}: {e}")
 
     def create_service_token(
-        self, service_id: str, audience: List[str], ttl_seconds: int = None
+        self, service_id: str, audience: List[str], ttl_seconds: Optional[int] = None
     ) -> Dict[str, Any]:
         """Create a service authentication token.
 

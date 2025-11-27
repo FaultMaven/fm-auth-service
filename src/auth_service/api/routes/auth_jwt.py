@@ -126,7 +126,15 @@ async def get_current_user(token: Optional[str] = Depends(extract_bearer_token))
 
         # Get user from store
         user_store = await get_user_store()
-        user = await user_store.get_user(validation_result.user_id)
+        user_id = validation_result.user_id
+        if not user_id:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail={"error": "invalid_token", "message": "Token has no user_id"},
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
+        user = await user_store.get_user(user_id)
 
         if not user:
             raise HTTPException(

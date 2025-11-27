@@ -7,7 +7,7 @@ Standard endpoint: /.well-known/jwks.json
 """
 
 import logging
-from typing import Any, Dict
+from typing import Any, Dict, Union
 
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
@@ -21,7 +21,7 @@ router = APIRouter(tags=["jwks"])
 
 
 @router.get("/.well-known/jwks.json")
-async def get_jwks() -> Dict[str, Any]:
+async def get_jwks() -> Union[Dict[str, Any], JSONResponse]:
     """Get JSON Web Key Set (JWKS)
 
     This endpoint provides the public key(s) used to sign JWT tokens.

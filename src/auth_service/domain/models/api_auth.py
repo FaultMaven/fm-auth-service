@@ -207,7 +207,7 @@ class AuthError(BaseModel):
 class TokenValidationError(AuthError):
     """Token validation error response"""
 
-    def __init__(self, description: str, correlation_id: str = None):
+    def __init__(self, description: str, correlation_id: Optional[str] = None):
         super().__init__(
             error="invalid_token", error_description=description, correlation_id=correlation_id
         )
@@ -216,7 +216,7 @@ class TokenValidationError(AuthError):
 class AuthenticationRequiredError(AuthError):
     """Authentication required error response"""
 
-    def __init__(self, correlation_id: str = None):
+    def __init__(self, correlation_id: Optional[str] = None):
         super().__init__(
             error="authentication_required",
             error_description="Authentication is required to access this resource",

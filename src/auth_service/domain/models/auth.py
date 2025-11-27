@@ -65,7 +65,7 @@ class DevUser:
     created_at: datetime
     is_dev_user: bool = True
     is_active: bool = True
-    roles: list[str] = None  # Will be set to ['admin'] by default in __post_init__
+    roles: Optional[list[str]] = None  # Will be set to ['admin'] by default in __post_init__
 
     def __post_init__(self):
         """Set default roles if not provided"""
