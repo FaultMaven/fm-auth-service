@@ -10,14 +10,13 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from enterprise.api import auth_router, organizations_router, teams_router, users_router, sso_router
-from enterprise.database import close_db
+from enterprise.api import auth_router, organizations_router, sso_router, teams_router, users_router
 from enterprise.config.settings import get_settings
+from enterprise.database import close_db
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -75,7 +74,7 @@ async def root():
         "service": "FaultMaven Auth Service",
         "edition": "enterprise",
         "version": "1.0.0",
-        "status": "running"
+        "status": "running",
     }
 
 

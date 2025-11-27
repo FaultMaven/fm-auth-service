@@ -5,6 +5,7 @@ Placeholder for OAuth 2.0 support (to be implemented).
 """
 
 from typing import Dict
+
 from enterprise.models.sso import SSOConfiguration
 
 

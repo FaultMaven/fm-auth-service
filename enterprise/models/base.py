@@ -17,4 +17,5 @@ class Base(DeclarativeBase):
     - Multi-tenancy with foreign keys
     - Advanced querying and relationships
     """
+
     pass

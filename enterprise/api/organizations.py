@@ -8,17 +8,17 @@ from typing import List, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
 from pydantic import BaseModel, Field
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from enterprise.models import Organization, EnterpriseUser
 from enterprise.middleware.auth import (
     get_current_active_user,
-    require_permissions,
+    require_org_access,
     require_org_admin,
-    require_org_access
+    require_permissions,
 )
+from enterprise.models import EnterpriseUser, Organization
 
 router = APIRouter(prefix="/api/v1/enterprise/organizations", tags=["organizations"])
 
@@ -26,6 +26,7 @@ router = APIRouter(prefix="/api/v1/enterprise/organizations", tags=["organizatio
 # Pydantic schemas
 class OrganizationCreate(BaseModel):
     """Schema for creating a new organization."""
+
     name: str = Field(..., min_length=1, max_length=255)
     slug: str = Field(..., min_length=1, max_length=100, pattern=r"^[a-z0-9-]+$")
     plan: str = Field(default="trial", pattern=r"^(trial|starter|professional|enterprise)$")
@@ -37,6 +38,7 @@ class OrganizationCreate(BaseModel):
 
 class OrganizationUpdate(BaseModel):
     """Schema for updating an organization."""
+
     name: Optional[str] = Field(None, min_length=1, max_length=255)
     plan: Optional[str] = Field(None, pattern=r"^(trial|starter|professional|enterprise)$")
     contact_email: Optional[str] = None
@@ -48,6 +50,7 @@ class OrganizationUpdate(BaseModel):
 
 class OrganizationResponse(BaseModel):
     """Schema for organization response."""
+
     id: UUID
     name: str
     slug: str
@@ -70,7 +73,7 @@ from enterprise.database import get_db
 async def create_organization(
     organization: OrganizationCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: EnterpriseUser = Depends(require_permissions("organizations:create"))
+    current_user: EnterpriseUser = Depends(require_permissions("organizations:create")),
 ):
     """
     Create a new organization.
@@ -90,15 +93,13 @@ async def create_organization(
         HTTPException: If organization with slug already exists
     """
     # Check if slug already exists
-    result = await db.execute(
-        select(Organization).where(Organization.slug == organization.slug)
-    )
+    result = await db.execute(select(Organization).where(Organization.slug == organization.slug))
     existing = result.scalar_one_or_none()
 
     if existing:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=f"Organization with slug '{organization.slug}' already exists"
+            detail=f"Organization with slug '{organization.slug}' already exists",
         )
 
     # Create organization
@@ -116,7 +117,7 @@ async def list_organizations(
     limit: int = 100,
     is_active: Optional[bool] = None,
     db: AsyncSession = Depends(get_db),
-    current_user: EnterpriseUser = Depends(get_current_active_user)
+    current_user: EnterpriseUser = Depends(get_current_active_user),
 ):
     """
     List organizations.
@@ -136,8 +137,7 @@ async def list_organizations(
     """
     # Multi-tenant isolation: only return user's organization
     query = select(Organization).where(
-        Organization.id == current_user.organization_id,
-        Organization.deleted_at.is_(None)
+        Organization.id == current_user.organization_id, Organization.deleted_at.is_(None)
     )
 
     if is_active is not None:
@@ -154,7 +154,7 @@ async def list_organizations(
 async def get_organization(
     organization_id: UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: EnterpriseUser = Depends(require_org_access)
+    current_user: EnterpriseUser = Depends(require_org_access),
 ):
     """
     Get organization by ID.
@@ -174,8 +174,7 @@ async def get_organization(
     """
     result = await db.execute(
         select(Organization).where(
-            Organization.id == organization_id,
-            Organization.deleted_at.is_(None)
+            Organization.id == organization_id, Organization.deleted_at.is_(None)
         )
     )
     organization = result.scalar_one_or_none()
@@ -183,7 +182,7 @@ async def get_organization(
     if not organization:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Organization {organization_id} not found"
+            detail=f"Organization {organization_id} not found",
         )
 
     return organization
@@ -194,7 +193,7 @@ async def update_organization(
     organization_id: UUID,
     organization_update: OrganizationUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: EnterpriseUser = Depends(require_org_admin)
+    current_user: EnterpriseUser = Depends(require_org_admin),
 ):
     """
     Update organization.
@@ -217,13 +216,12 @@ async def update_organization(
     if current_user.organization_id != organization_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied: You do not belong to this organization"
+            detail="Access denied: You do not belong to this organization",
         )
 
     result = await db.execute(
         select(Organization).where(
-            Organization.id == organization_id,
-            Organization.deleted_at.is_(None)
+            Organization.id == organization_id, Organization.deleted_at.is_(None)
         )
     )
     organization = result.scalar_one_or_none()
@@ -231,7 +229,7 @@ async def update_organization(
     if not organization:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Organization {organization_id} not found"
+            detail=f"Organization {organization_id} not found",
         )
 
     # Update fields
@@ -249,7 +247,7 @@ async def update_organization(
 async def delete_organization(
     organization_id: UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: EnterpriseUser = Depends(require_org_admin)
+    current_user: EnterpriseUser = Depends(require_org_admin),
 ):
     """
     Soft delete organization.
@@ -269,13 +267,12 @@ async def delete_organization(
     if current_user.organization_id != organization_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied: You do not belong to this organization"
+            detail="Access denied: You do not belong to this organization",
         )
 
     result = await db.execute(
         select(Organization).where(
-            Organization.id == organization_id,
-            Organization.deleted_at.is_(None)
+            Organization.id == organization_id, Organization.deleted_at.is_(None)
         )
     )
     organization = result.scalar_one_or_none()
@@ -283,7 +280,7 @@ async def delete_organization(
     if not organization:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Organization {organization_id} not found"
+            detail=f"Organization {organization_id} not found",
         )
 
     organization.soft_delete()

@@ -7,9 +7,9 @@ Supports:
 - OIDC (OpenID Connect)
 """
 
-from enterprise.auth.saml import SAMLAuthProvider
 from enterprise.auth.oauth import OAuthProvider
 from enterprise.auth.oidc import OIDCProvider
+from enterprise.auth.saml import SAMLAuthProvider
 
 __all__ = [
     "SAMLAuthProvider",

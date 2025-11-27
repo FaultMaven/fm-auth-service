@@ -13,9 +13,10 @@ def _utc_now() -> datetime:
     """Return current UTC time (timezone-aware)."""
     return datetime.now(timezone.utc)
 
-from sqlalchemy import String, DateTime, ForeignKey, Text, JSON
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from sqlalchemy import JSON, DateTime, ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from enterprise.models.base import Base
 
@@ -34,24 +35,20 @@ class AuditLog(Base):
     __tablename__ = "audit_logs"
 
     # Primary key
-    id: Mapped[UUID] = mapped_column(
-        PG_UUID(as_uuid=True),
-        primary_key=True,
-        default=uuid4
-    )
+    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid4)
 
     # Foreign keys
     organization_id: Mapped[UUID] = mapped_column(
         PG_UUID(as_uuid=True),
         ForeignKey("organizations.id", ondelete="CASCADE"),
         nullable=False,
-        index=True
+        index=True,
     )
     user_id: Mapped[Optional[UUID]] = mapped_column(
         PG_UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True,
-        index=True
+        index=True,
     )
 
     # Event details
@@ -59,8 +56,12 @@ class AuditLog(Base):
     # Event types: login_success, login_failed, logout, role_assigned,
     #              permission_denied, user_created, user_deleted, etc.
 
-    action: Mapped[str] = mapped_column(String(50), nullable=False)  # create, read, update, delete, login, etc.
-    resource: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)  # users, teams, cases, etc.
+    action: Mapped[str] = mapped_column(
+        String(50), nullable=False
+    )  # create, read, update, delete, login, etc.
+    resource: Mapped[Optional[str]] = mapped_column(
+        String(100), nullable=True
+    )  # users, teams, cases, etc.
     resource_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
 
     # Request context
@@ -76,12 +77,13 @@ class AuditLog(Base):
     context_data: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
 
     # Timestamp
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utc_now, nullable=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=_utc_now, nullable=False, index=True
+    )
 
     # Relationships
     user: Mapped[Optional["EnterpriseUser"]] = relationship(
-        "EnterpriseUser",
-        back_populates="audit_logs"
+        "EnterpriseUser", back_populates="audit_logs"
     )
 
     def __repr__(self) -> str:

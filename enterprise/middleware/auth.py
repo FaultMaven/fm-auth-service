@@ -12,16 +12,15 @@ from typing import List, Optional
 from uuid import UUID
 
 from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from enterprise.config.settings import get_settings
 from enterprise.database import get_db
-from enterprise.models import EnterpriseUser, Organization, Role, Permission
-
+from enterprise.models import EnterpriseUser, Organization, Permission, Role
 
 # HTTP Bearer token scheme
 security = HTTPBearer()
@@ -32,7 +31,7 @@ settings = get_settings()
 
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ) -> EnterpriseUser:
     """
     Validate JWT token and return current user.
@@ -57,11 +56,7 @@ async def get_current_user(
 
     try:
         # Decode JWT token
-        payload = jwt.decode(
-            token,
-            settings.JWT_SECRET_KEY,
-            algorithms=[settings.JWT_ALGORITHM]
-        )
+        payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
         user_id: str = payload.get("sub")
         if user_id is None:
             raise credentials_exception
@@ -70,12 +65,17 @@ async def get_current_user(
         raise credentials_exception
 
     # Fetch user from database with relationships
+    # Note: EnterpriseUser.roles -> UserRole -> Role -> Permission
+    from enterprise.models.role import UserRole
+
     stmt = (
         select(EnterpriseUser)
         .options(
             selectinload(EnterpriseUser.organization),
-            selectinload(EnterpriseUser.teams),
-            selectinload(EnterpriseUser.roles).selectinload(Role.permissions)
+            selectinload(EnterpriseUser.team),
+            selectinload(EnterpriseUser.roles)
+            .selectinload(UserRole.role)
+            .selectinload(Role.permissions),
         )
         .where(EnterpriseUser.id == UUID(user_id))
     )
@@ -89,7 +89,7 @@ async def get_current_user(
 
 
 async def get_current_active_user(
-    current_user: EnterpriseUser = Depends(get_current_user)
+    current_user: EnterpriseUser = Depends(get_current_user),
 ) -> EnterpriseUser:
     """
     Get current user and verify they are active.
@@ -104,10 +104,7 @@ async def get_current_active_user(
         HTTPException: If user is inactive
     """
     if not current_user.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Inactive user"
-        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Inactive user")
     return current_user
 
 
@@ -129,13 +126,13 @@ def require_permissions(*permission_names: str):
     Raises:
         HTTPException: If user doesn't have required permissions
     """
-    async def permission_checker(
-        current_user: EnterpriseUser = Depends(get_current_active_user)
-    ):
+
+    async def permission_checker(current_user: EnterpriseUser = Depends(get_current_active_user)):
         # Get all user permissions from their roles
+        # Note: current_user.roles is a list of UserRole junction objects
         user_permissions = set()
-        for role in current_user.roles:
-            for permission in role.permissions:
+        for user_role in current_user.roles:
+            for permission in user_role.role.permissions:
                 user_permissions.add(permission.name)
 
         # Check if user has all required permissions
@@ -143,7 +140,7 @@ def require_permissions(*permission_names: str):
             if required_permission not in user_permissions:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
-                    detail=f"Permission denied: {required_permission} required"
+                    detail=f"Permission denied: {required_permission} required",
                 )
 
         return current_user
@@ -152,7 +149,7 @@ def require_permissions(*permission_names: str):
 
 
 async def require_org_admin(
-    current_user: EnterpriseUser = Depends(get_current_active_user)
+    current_user: EnterpriseUser = Depends(get_current_active_user),
 ) -> EnterpriseUser:
     """
     Require user to be an admin of their organization.
@@ -167,16 +164,17 @@ async def require_org_admin(
         HTTPException: If user is not an org admin
     """
     # Check if user has admin role for their organization
+    # Note: current_user.roles is a list of UserRole junction objects
     is_admin = False
-    for role in current_user.roles:
+    for user_role in current_user.roles:
+        role = user_role.role
         if role.name == "Admin" and role.organization_id == current_user.organization_id:
             is_admin = True
             break
 
     if not is_admin:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Organization admin access required"
+            status_code=status.HTTP_403_FORBIDDEN, detail="Organization admin access required"
         )
 
     return current_user
@@ -199,9 +197,7 @@ class OrganizationAccessChecker:
     """
 
     def __call__(
-        self,
-        organization_id: UUID,
-        current_user: EnterpriseUser = Depends(get_current_active_user)
+        self, organization_id: UUID, current_user: EnterpriseUser = Depends(get_current_active_user)
     ) -> EnterpriseUser:
         """
         Check if user belongs to the organization.
@@ -219,7 +215,7 @@ class OrganizationAccessChecker:
         if current_user.organization_id != organization_id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Access denied: You do not belong to this organization"
+                detail="Access denied: You do not belong to this organization",
             )
         return current_user
 
@@ -230,7 +226,7 @@ require_org_access = OrganizationAccessChecker()
 
 async def get_org_from_user(
     current_user: EnterpriseUser = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ) -> Organization:
     """
     Get the organization of the current user.
@@ -252,9 +248,6 @@ async def get_org_from_user(
     organization = result.scalar_one_or_none()
 
     if organization is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Organization not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Organization not found")
 
     return organization

@@ -13,7 +13,6 @@ from jose import jwt
 
 from enterprise.config.settings import get_settings
 
-
 settings = get_settings()
 
 
@@ -29,8 +28,8 @@ def hash_password(password: str) -> str:
     """
     # Generate salt and hash password
     salt = bcrypt.gensalt()
-    hashed = bcrypt.hashpw(password.encode('utf-8'), salt)
-    return hashed.decode('utf-8')
+    hashed = bcrypt.hashpw(password.encode("utf-8"), salt)
+    return hashed.decode("utf-8")
 
 
 def verify_password(password: str, hashed_password: str) -> bool:
@@ -45,19 +44,13 @@ def verify_password(password: str, hashed_password: str) -> bool:
         True if password matches, False otherwise
     """
     try:
-        return bcrypt.checkpw(
-            password.encode('utf-8'),
-            hashed_password.encode('utf-8')
-        )
+        return bcrypt.checkpw(password.encode("utf-8"), hashed_password.encode("utf-8"))
     except Exception:
         return False
 
 
 def create_access_token(
-    user_id: UUID,
-    organization_id: UUID,
-    email: str,
-    expires_delta: Optional[timedelta] = None
+    user_id: UUID, organization_id: UUID, email: str, expires_delta: Optional[timedelta] = None
 ) -> str:
     """
     Create a JWT access token.
@@ -75,9 +68,7 @@ def create_access_token(
     if expires_delta:
         expire = now + expires_delta
     else:
-        expire = now + timedelta(
-            minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
-        )
+        expire = now + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
 
     to_encode = {
         "sub": str(user_id),  # Subject (user ID)
@@ -85,21 +76,14 @@ def create_access_token(
         "org_id": str(organization_id),
         "exp": expire,  # Expiration time
         "iat": now,  # Issued at
-        "type": "access"
+        "type": "access",
     }
 
-    encoded_jwt = jwt.encode(
-        to_encode,
-        settings.JWT_SECRET_KEY,
-        algorithm=settings.JWT_ALGORITHM
-    )
+    encoded_jwt = jwt.encode(to_encode, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
     return encoded_jwt
 
 
-def create_refresh_token(
-    user_id: UUID,
-    expires_delta: Optional[timedelta] = None
-) -> str:
+def create_refresh_token(user_id: UUID, expires_delta: Optional[timedelta] = None) -> str:
     """
     Create a JWT refresh token.
 
@@ -117,22 +101,11 @@ def create_refresh_token(
     if expires_delta:
         expire = now + expires_delta
     else:
-        expire = now + timedelta(
-            days=settings.REFRESH_TOKEN_EXPIRE_DAYS
-        )
+        expire = now + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
 
-    to_encode = {
-        "sub": str(user_id),
-        "exp": expire,
-        "iat": now,
-        "type": "refresh"
-    }
+    to_encode = {"sub": str(user_id), "exp": expire, "iat": now, "type": "refresh"}
 
-    encoded_jwt = jwt.encode(
-        to_encode,
-        settings.JWT_SECRET_KEY,
-        algorithm=settings.JWT_ALGORITHM
-    )
+    encoded_jwt = jwt.encode(to_encode, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
     return encoded_jwt
 
 
@@ -151,11 +124,7 @@ def verify_token(token: str, token_type: str = "access") -> dict:
         JWTError: If token is invalid or expired
         ValueError: If token type doesn't match
     """
-    payload = jwt.decode(
-        token,
-        settings.JWT_SECRET_KEY,
-        algorithms=[settings.JWT_ALGORITHM]
-    )
+    payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
 
     # Verify token type
     if payload.get("type") != token_type:

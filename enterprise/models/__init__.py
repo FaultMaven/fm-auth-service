@@ -9,12 +9,12 @@ These models extend the PUBLIC foundation with:
 - Audit logging
 """
 
+from enterprise.models.audit import AuditLog
 from enterprise.models.organization import Organization
+from enterprise.models.role import Permission, Role, UserRole
+from enterprise.models.sso import SSOConfiguration
 from enterprise.models.team import Team
 from enterprise.models.user import EnterpriseUser
-from enterprise.models.role import Role, Permission, UserRole
-from enterprise.models.audit import AuditLog
-from enterprise.models.sso import SSOConfiguration
 
 __all__ = [
     "Organization",

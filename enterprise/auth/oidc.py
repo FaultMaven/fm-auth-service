@@ -5,6 +5,7 @@ Placeholder for OIDC support (to be implemented).
 """
 
 from typing import Dict
+
 from enterprise.models.sso import SSOConfiguration
 
 
