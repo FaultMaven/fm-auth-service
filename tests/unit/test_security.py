@@ -17,6 +17,8 @@ from enterprise.security import (
     verify_token,
 )
 
+pytestmark = pytest.mark.unit
+
 settings = get_settings()
 
 

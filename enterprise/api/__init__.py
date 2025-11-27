@@ -11,9 +11,9 @@ Provides REST API endpoints for:
 
 from enterprise.api.auth import router as auth_router
 from enterprise.api.organizations import router as organizations_router
+from enterprise.api.sso import router as sso_router
 from enterprise.api.teams import router as teams_router
 from enterprise.api.users import router as users_router
-from enterprise.api.sso import router as sso_router
 
 __all__ = [
     "auth_router",

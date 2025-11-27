@@ -5,6 +5,7 @@ Extends the PUBLIC foundation settings with enterprise-specific configuration.
 """
 
 from typing import Optional
+
 from pydantic_settings import BaseSettings
 
 

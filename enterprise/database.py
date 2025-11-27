@@ -7,16 +7,15 @@ Provides async SQLAlchemy session factory and dependency injection.
 import os
 from typing import AsyncGenerator
 
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
 
 from enterprise.models.base import Base
 
-
 # Get database URL from environment
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "postgresql+asyncpg://faultmaven:dev_password_change_in_production@localhost:5432/faultmaven_enterprise"
+    "postgresql+asyncpg://faultmaven:dev_password_change_in_production@localhost:5432/faultmaven_enterprise",
 )
 
 # Convert postgresql:// to postgresql+asyncpg:// if needed

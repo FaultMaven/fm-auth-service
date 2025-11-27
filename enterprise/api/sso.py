@@ -8,16 +8,16 @@ from typing import List, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
 from pydantic import BaseModel, Field
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from enterprise.models import SSOConfiguration, Organization, EnterpriseUser
 from enterprise.middleware.auth import (
     get_current_active_user,
+    require_org_access,
     require_org_admin,
-    require_org_access
 )
+from enterprise.models import EnterpriseUser, Organization, SSOConfiguration
 
 router = APIRouter(prefix="/api/v1/enterprise/sso", tags=["sso"])
 
@@ -25,6 +25,7 @@ router = APIRouter(prefix="/api/v1/enterprise/sso", tags=["sso"])
 # Pydantic schemas
 class SSOConfigurationCreate(BaseModel):
     """Schema for creating SSO configuration."""
+
     organization_id: UUID
     provider_type: str = Field(..., pattern=r"^(saml|oauth|oidc)$")
     provider_name: str = Field(..., min_length=1, max_length=255)
@@ -57,6 +58,7 @@ class SSOConfigurationCreate(BaseModel):
 
 class SSOConfigurationUpdate(BaseModel):
     """Schema for updating SSO configuration."""
+
     provider_name: Optional[str] = Field(None, min_length=1, max_length=255)
     is_enabled: Optional[bool] = None
     saml_entity_id: Optional[str] = None
@@ -71,6 +73,7 @@ class SSOConfigurationUpdate(BaseModel):
 
 class SSOConfigurationResponse(BaseModel):
     """Schema for SSO configuration response."""
+
     id: UUID
     organization_id: UUID
     provider_type: str
@@ -101,7 +104,7 @@ from enterprise.database import get_db
 async def create_sso_configuration(
     sso_config: SSOConfigurationCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: EnterpriseUser = Depends(require_org_admin)
+    current_user: EnterpriseUser = Depends(require_org_admin),
 ):
     """
     Create SSO configuration for an organization.
@@ -123,14 +126,13 @@ async def create_sso_configuration(
     if current_user.organization_id != sso_config.organization_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied: You do not belong to this organization"
+            detail="Access denied: You do not belong to this organization",
         )
 
     # Verify organization exists
     org_result = await db.execute(
         select(Organization).where(
-            Organization.id == sso_config.organization_id,
-            Organization.deleted_at.is_(None)
+            Organization.id == sso_config.organization_id, Organization.deleted_at.is_(None)
         )
     )
     organization = org_result.scalar_one_or_none()
@@ -138,7 +140,7 @@ async def create_sso_configuration(
     if not organization:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Organization {sso_config.organization_id} not found"
+            detail=f"Organization {sso_config.organization_id} not found",
         )
 
     # Validate provider-specific fields
@@ -146,14 +148,14 @@ async def create_sso_configuration(
         if not sso_config.saml_entity_id or not sso_config.saml_sso_url:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="SAML configuration requires entity_id and sso_url"
+                detail="SAML configuration requires entity_id and sso_url",
             )
 
     elif sso_config.provider_type in ["oauth", "oidc"]:
         if not sso_config.oauth_client_id or not sso_config.oauth_client_secret:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"{sso_config.provider_type.upper()} configuration requires client_id and client_secret"
+                detail=f"{sso_config.provider_type.upper()} configuration requires client_id and client_secret",
             )
 
     # Create SSO configuration
@@ -170,7 +172,7 @@ async def list_organization_sso_configurations(
     organization_id: UUID,
     provider_type: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
-    current_user: EnterpriseUser = Depends(require_org_access)
+    current_user: EnterpriseUser = Depends(require_org_access),
 ):
     """
     List SSO configurations for an organization.
@@ -186,9 +188,7 @@ async def list_organization_sso_configurations(
     Returns:
         List of SSO configurations
     """
-    query = select(SSOConfiguration).where(
-        SSOConfiguration.organization_id == organization_id
-    )
+    query = select(SSOConfiguration).where(SSOConfiguration.organization_id == organization_id)
 
     if provider_type:
         query = query.where(SSOConfiguration.provider_type == provider_type)
@@ -203,7 +203,7 @@ async def list_organization_sso_configurations(
 async def get_sso_configuration(
     sso_config_id: UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: EnterpriseUser = Depends(get_current_active_user)
+    current_user: EnterpriseUser = Depends(get_current_active_user),
 ):
     """
     Get SSO configuration by ID.
@@ -221,22 +221,20 @@ async def get_sso_configuration(
     Raises:
         HTTPException: If configuration not found or access denied
     """
-    result = await db.execute(
-        select(SSOConfiguration).where(SSOConfiguration.id == sso_config_id)
-    )
+    result = await db.execute(select(SSOConfiguration).where(SSOConfiguration.id == sso_config_id))
     sso_config = result.scalar_one_or_none()
 
     if not sso_config:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"SSO configuration {sso_config_id} not found"
+            detail=f"SSO configuration {sso_config_id} not found",
         )
 
     # Multi-tenant isolation: verify user belongs to the configuration's organization
     if current_user.organization_id != sso_config.organization_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied: You do not belong to this configuration's organization"
+            detail="Access denied: You do not belong to this configuration's organization",
         )
 
     return sso_config
@@ -247,7 +245,7 @@ async def update_sso_configuration(
     sso_config_id: UUID,
     sso_update: SSOConfigurationUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: EnterpriseUser = Depends(require_org_admin)
+    current_user: EnterpriseUser = Depends(require_org_admin),
 ):
     """
     Update SSO configuration.
@@ -266,22 +264,20 @@ async def update_sso_configuration(
     Raises:
         HTTPException: If configuration not found or access denied
     """
-    result = await db.execute(
-        select(SSOConfiguration).where(SSOConfiguration.id == sso_config_id)
-    )
+    result = await db.execute(select(SSOConfiguration).where(SSOConfiguration.id == sso_config_id))
     sso_config = result.scalar_one_or_none()
 
     if not sso_config:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"SSO configuration {sso_config_id} not found"
+            detail=f"SSO configuration {sso_config_id} not found",
         )
 
     # Multi-tenant isolation: verify user belongs to the configuration's organization
     if current_user.organization_id != sso_config.organization_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied: You do not belong to this configuration's organization"
+            detail="Access denied: You do not belong to this configuration's organization",
         )
 
     # Update fields
@@ -299,7 +295,7 @@ async def update_sso_configuration(
 async def delete_sso_configuration(
     sso_config_id: UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: EnterpriseUser = Depends(require_org_admin)
+    current_user: EnterpriseUser = Depends(require_org_admin),
 ):
     """
     Delete SSO configuration.
@@ -314,22 +310,20 @@ async def delete_sso_configuration(
     Raises:
         HTTPException: If configuration not found or access denied
     """
-    result = await db.execute(
-        select(SSOConfiguration).where(SSOConfiguration.id == sso_config_id)
-    )
+    result = await db.execute(select(SSOConfiguration).where(SSOConfiguration.id == sso_config_id))
     sso_config = result.scalar_one_or_none()
 
     if not sso_config:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"SSO configuration {sso_config_id} not found"
+            detail=f"SSO configuration {sso_config_id} not found",
         )
 
     # Multi-tenant isolation: verify user belongs to the configuration's organization
     if current_user.organization_id != sso_config.organization_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied: You do not belong to this configuration's organization"
+            detail="Access denied: You do not belong to this configuration's organization",
         )
 
     await db.delete(sso_config)

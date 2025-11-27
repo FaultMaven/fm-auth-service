@@ -8,17 +8,17 @@ from typing import List, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
 from pydantic import BaseModel, Field
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from enterprise.models import Team, Organization, EnterpriseUser
 from enterprise.middleware.auth import (
     get_current_active_user,
-    require_permissions,
+    require_org_access,
     require_org_admin,
-    require_org_access
+    require_permissions,
 )
+from enterprise.models import EnterpriseUser, Organization, Team
 
 router = APIRouter(prefix="/api/v1/enterprise/teams", tags=["teams"])
 
@@ -26,6 +26,7 @@ router = APIRouter(prefix="/api/v1/enterprise/teams", tags=["teams"])
 # Pydantic schemas
 class TeamCreate(BaseModel):
     """Schema for creating a new team."""
+
     organization_id: UUID
     name: str = Field(..., min_length=1, max_length=255)
     slug: str = Field(..., min_length=1, max_length=100, pattern=r"^[a-z0-9-]+$")
@@ -34,6 +35,7 @@ class TeamCreate(BaseModel):
 
 class TeamUpdate(BaseModel):
     """Schema for updating a team."""
+
     name: Optional[str] = Field(None, min_length=1, max_length=255)
     slug: Optional[str] = Field(None, min_length=1, max_length=100, pattern=r"^[a-z0-9-]+$")
     description: Optional[str] = None
@@ -41,6 +43,7 @@ class TeamUpdate(BaseModel):
 
 class TeamResponse(BaseModel):
     """Schema for team response."""
+
     id: UUID
     organization_id: UUID
     name: str
@@ -59,7 +62,7 @@ from enterprise.database import get_db
 async def create_team(
     team: TeamCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: EnterpriseUser = Depends(require_permissions("teams:create"))
+    current_user: EnterpriseUser = Depends(require_permissions("teams:create")),
 ):
     """
     Create a new team within an organization.
@@ -81,14 +84,13 @@ async def create_team(
     if current_user.organization_id != team.organization_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied: You do not belong to this organization"
+            detail="Access denied: You do not belong to this organization",
         )
 
     # Verify organization exists
     org_result = await db.execute(
         select(Organization).where(
-            Organization.id == team.organization_id,
-            Organization.deleted_at.is_(None)
+            Organization.id == team.organization_id, Organization.deleted_at.is_(None)
         )
     )
     organization = org_result.scalar_one_or_none()
@@ -96,22 +98,19 @@ async def create_team(
     if not organization:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Organization {team.organization_id} not found"
+            detail=f"Organization {team.organization_id} not found",
         )
 
     # Check team limit
     teams_result = await db.execute(
-        select(Team).where(
-            Team.organization_id == team.organization_id,
-            Team.deleted_at.is_(None)
-        )
+        select(Team).where(Team.organization_id == team.organization_id, Team.deleted_at.is_(None))
     )
     team_count = len(teams_result.scalars().all())
 
     if team_count >= organization.max_teams:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"Organization has reached maximum teams limit ({organization.max_teams})"
+            detail=f"Organization has reached maximum teams limit ({organization.max_teams})",
         )
 
     # Check if slug already exists in organization
@@ -119,7 +118,7 @@ async def create_team(
         select(Team).where(
             Team.organization_id == team.organization_id,
             Team.slug == team.slug,
-            Team.deleted_at.is_(None)
+            Team.deleted_at.is_(None),
         )
     )
     existing = slug_result.scalar_one_or_none()
@@ -127,7 +126,7 @@ async def create_team(
     if existing:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=f"Team with slug '{team.slug}' already exists in this organization"
+            detail=f"Team with slug '{team.slug}' already exists in this organization",
         )
 
     # Create team
@@ -145,7 +144,7 @@ async def list_organization_teams(
     skip: int = 0,
     limit: int = 100,
     db: AsyncSession = Depends(get_db),
-    current_user: EnterpriseUser = Depends(require_org_access)
+    current_user: EnterpriseUser = Depends(require_org_access),
 ):
     """
     List teams for an organization.
@@ -162,10 +161,12 @@ async def list_organization_teams(
     Returns:
         List of teams
     """
-    query = select(Team).where(
-        Team.organization_id == organization_id,
-        Team.deleted_at.is_(None)
-    ).offset(skip).limit(limit)
+    query = (
+        select(Team)
+        .where(Team.organization_id == organization_id, Team.deleted_at.is_(None))
+        .offset(skip)
+        .limit(limit)
+    )
 
     result = await db.execute(query)
     teams = result.scalars().all()
@@ -177,7 +178,7 @@ async def list_organization_teams(
 async def get_team(
     team_id: UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: EnterpriseUser = Depends(get_current_active_user)
+    current_user: EnterpriseUser = Depends(get_current_active_user),
 ):
     """
     Get team by ID.
@@ -195,25 +196,19 @@ async def get_team(
     Raises:
         HTTPException: If team not found or access denied
     """
-    result = await db.execute(
-        select(Team).where(
-            Team.id == team_id,
-            Team.deleted_at.is_(None)
-        )
-    )
+    result = await db.execute(select(Team).where(Team.id == team_id, Team.deleted_at.is_(None)))
     team = result.scalar_one_or_none()
 
     if not team:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Team {team_id} not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"Team {team_id} not found"
         )
 
     # Multi-tenant isolation: verify user belongs to the team's organization
     if current_user.organization_id != team.organization_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied: You do not belong to this team's organization"
+            detail="Access denied: You do not belong to this team's organization",
         )
 
     return team
@@ -224,7 +219,7 @@ async def update_team(
     team_id: UUID,
     team_update: TeamUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: EnterpriseUser = Depends(require_permissions("teams:update"))
+    current_user: EnterpriseUser = Depends(require_permissions("teams:update")),
 ):
     """
     Update team.
@@ -243,25 +238,19 @@ async def update_team(
     Raises:
         HTTPException: If team not found, access denied, or slug conflict
     """
-    result = await db.execute(
-        select(Team).where(
-            Team.id == team_id,
-            Team.deleted_at.is_(None)
-        )
-    )
+    result = await db.execute(select(Team).where(Team.id == team_id, Team.deleted_at.is_(None)))
     team = result.scalar_one_or_none()
 
     if not team:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Team {team_id} not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"Team {team_id} not found"
         )
 
     # Multi-tenant isolation: verify user belongs to the team's organization
     if current_user.organization_id != team.organization_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied: You do not belong to this team's organization"
+            detail="Access denied: You do not belong to this team's organization",
         )
 
     # Check slug uniqueness if being updated
@@ -272,7 +261,7 @@ async def update_team(
                 Team.organization_id == team.organization_id,
                 Team.slug == update_data["slug"],
                 Team.id != team_id,
-                Team.deleted_at.is_(None)
+                Team.deleted_at.is_(None),
             )
         )
         existing = slug_result.scalar_one_or_none()
@@ -280,7 +269,7 @@ async def update_team(
         if existing:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail=f"Team with slug '{update_data['slug']}' already exists in this organization"
+                detail=f"Team with slug '{update_data['slug']}' already exists in this organization",
             )
 
     # Update fields
@@ -297,7 +286,7 @@ async def update_team(
 async def delete_team(
     team_id: UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: EnterpriseUser = Depends(require_permissions("teams:delete"))
+    current_user: EnterpriseUser = Depends(require_permissions("teams:delete")),
 ):
     """
     Soft delete team.
@@ -312,25 +301,19 @@ async def delete_team(
     Raises:
         HTTPException: If team not found or access denied
     """
-    result = await db.execute(
-        select(Team).where(
-            Team.id == team_id,
-            Team.deleted_at.is_(None)
-        )
-    )
+    result = await db.execute(select(Team).where(Team.id == team_id, Team.deleted_at.is_(None)))
     team = result.scalar_one_or_none()
 
     if not team:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Team {team_id} not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"Team {team_id} not found"
         )
 
     # Multi-tenant isolation: verify user belongs to the team's organization
     if current_user.organization_id != team.organization_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied: You do not belong to this team's organization"
+            detail="Access denied: You do not belong to this team's organization",
         )
 
     team.soft_delete()

@@ -12,23 +12,22 @@ from typing import Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError
 from pydantic import BaseModel, EmailStr, Field
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from enterprise.database import get_db
+from enterprise.middleware.auth import get_current_user
 from enterprise.models import EnterpriseUser, Organization
 from enterprise.security import (
-    verify_password,
-    hash_password,
     create_access_token,
     create_refresh_token,
-    verify_token
+    hash_password,
+    verify_password,
+    verify_token,
 )
-from enterprise.middleware.auth import get_current_user
-
 
 router = APIRouter(prefix="/api/v1/enterprise/auth", tags=["authentication"])
 security = HTTPBearer()
@@ -37,12 +36,14 @@ security = HTTPBearer()
 # Pydantic schemas
 class LoginRequest(BaseModel):
     """Schema for login request."""
+
     email: EmailStr
     password: str = Field(..., min_length=8)
 
 
 class TokenResponse(BaseModel):
     """Schema for token response."""
+
     access_token: str
     refresh_token: str
     token_type: str = "bearer"
@@ -51,11 +52,13 @@ class TokenResponse(BaseModel):
 
 class RefreshTokenRequest(BaseModel):
     """Schema for refresh token request."""
+
     refresh_token: str
 
 
 class RegisterRequest(BaseModel):
     """Schema for user registration request."""
+
     organization_id: UUID
     email: EmailStr
     full_name: str = Field(..., min_length=1, max_length=255)
@@ -65,6 +68,7 @@ class RegisterRequest(BaseModel):
 
 class RegisterResponse(BaseModel):
     """Schema for registration response."""
+
     id: UUID
     email: str
     full_name: str
@@ -74,14 +78,12 @@ class RegisterResponse(BaseModel):
 
 class MessageResponse(BaseModel):
     """Generic message response."""
+
     message: str
 
 
 @router.post("/login", response_model=TokenResponse)
-async def login(
-    login_data: LoginRequest,
-    db: AsyncSession = Depends(get_db)
-):
+async def login(login_data: LoginRequest, db: AsyncSession = Depends(get_db)):
     """
     Authenticate user and return JWT tokens.
 
@@ -98,8 +100,7 @@ async def login(
     # Find user by email
     result = await db.execute(
         select(EnterpriseUser).where(
-            EnterpriseUser.email == login_data.email,
-            EnterpriseUser.deleted_at.is_(None)
+            EnterpriseUser.email == login_data.email, EnterpriseUser.deleted_at.is_(None)
         )
     )
     user = result.scalar_one_or_none()
@@ -121,37 +122,30 @@ async def login(
 
     # Check if user is active
     if not user.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Account is disabled"
-        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account is disabled")
 
     # Generate tokens
     access_token = create_access_token(
-        user_id=user.id,
-        organization_id=user.organization_id,
-        email=user.email
+        user_id=user.id, organization_id=user.organization_id, email=user.email
     )
 
     refresh_token = create_refresh_token(user_id=user.id)
 
     # Return tokens
     from enterprise.config.settings import get_settings
+
     settings = get_settings()
 
     return TokenResponse(
         access_token=access_token,
         refresh_token=refresh_token,
         token_type="bearer",
-        expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60  # Convert to seconds
+        expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,  # Convert to seconds
     )
 
 
 @router.post("/refresh", response_model=TokenResponse)
-async def refresh_token(
-    refresh_data: RefreshTokenRequest,
-    db: AsyncSession = Depends(get_db)
-):
+async def refresh_token(refresh_data: RefreshTokenRequest, db: AsyncSession = Depends(get_db)):
     """
     Refresh access token using refresh token.
 
@@ -173,8 +167,7 @@ async def refresh_token(
         # Fetch user
         result = await db.execute(
             select(EnterpriseUser).where(
-                EnterpriseUser.id == user_id,
-                EnterpriseUser.deleted_at.is_(None)
+                EnterpriseUser.id == user_id, EnterpriseUser.deleted_at.is_(None)
             )
         )
         user = result.scalar_one_or_none()
@@ -188,28 +181,24 @@ async def refresh_token(
 
         # Check if user is active
         if not user.is_active:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Account is disabled"
-            )
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account is disabled")
 
         # Generate new tokens
         access_token = create_access_token(
-            user_id=user.id,
-            organization_id=user.organization_id,
-            email=user.email
+            user_id=user.id, organization_id=user.organization_id, email=user.email
         )
 
         new_refresh_token = create_refresh_token(user_id=user.id)
 
         from enterprise.config.settings import get_settings
+
         settings = get_settings()
 
         return TokenResponse(
             access_token=access_token,
             refresh_token=new_refresh_token,
             token_type="bearer",
-            expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
+            expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         )
 
     except JWTError:
@@ -227,9 +216,7 @@ async def refresh_token(
 
 
 @router.post("/logout", response_model=MessageResponse)
-async def logout(
-    current_user: EnterpriseUser = Depends(get_current_user)
-):
+async def logout(current_user: EnterpriseUser = Depends(get_current_user)):
     """
     Logout user (invalidate token).
 
@@ -246,16 +233,11 @@ async def logout(
     # TODO: Implement token blacklist in Redis for true server-side revocation
     # For now, logout is handled client-side by discarding tokens
 
-    return MessageResponse(
-        message="Logged out successfully. Please discard your tokens."
-    )
+    return MessageResponse(message="Logged out successfully. Please discard your tokens.")
 
 
 @router.post("/register", response_model=RegisterResponse, status_code=status.HTTP_201_CREATED)
-async def register(
-    register_data: RegisterRequest,
-    db: AsyncSession = Depends(get_db)
-):
+async def register(register_data: RegisterRequest, db: AsyncSession = Depends(get_db)):
     """
     Register a new user.
 
@@ -272,8 +254,7 @@ async def register(
     # Check if email already exists
     result = await db.execute(
         select(EnterpriseUser).where(
-            EnterpriseUser.email == register_data.email,
-            EnterpriseUser.deleted_at.is_(None)
+            EnterpriseUser.email == register_data.email, EnterpriseUser.deleted_at.is_(None)
         )
     )
     existing_user = result.scalar_one_or_none()
@@ -281,14 +262,13 @@ async def register(
     if existing_user:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=f"User with email '{register_data.email}' already exists"
+            detail=f"User with email '{register_data.email}' already exists",
         )
 
     # Verify organization exists
     org_result = await db.execute(
         select(Organization).where(
-            Organization.id == register_data.organization_id,
-            Organization.deleted_at.is_(None)
+            Organization.id == register_data.organization_id, Organization.deleted_at.is_(None)
         )
     )
     organization = org_result.scalar_one_or_none()
@@ -296,14 +276,14 @@ async def register(
     if not organization:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Organization {register_data.organization_id} not found"
+            detail=f"Organization {register_data.organization_id} not found",
         )
 
     # Check organization user limit
     users_result = await db.execute(
         select(EnterpriseUser).where(
             EnterpriseUser.organization_id == register_data.organization_id,
-            EnterpriseUser.deleted_at.is_(None)
+            EnterpriseUser.deleted_at.is_(None),
         )
     )
     user_count = len(users_result.scalars().all())
@@ -311,7 +291,7 @@ async def register(
     if user_count >= organization.max_users:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"Organization has reached maximum users limit ({organization.max_users})"
+            detail=f"Organization has reached maximum users limit ({organization.max_users})",
         )
 
     # Hash password
@@ -325,7 +305,7 @@ async def register(
         full_name=register_data.full_name,
         hashed_password=hashed_password,
         is_active=True,  # Auto-activate for now (TODO: email verification)
-        is_verified=False  # Will be verified via email (TODO)
+        is_verified=False,  # Will be verified via email (TODO)
     )
 
     db.add(new_user)
@@ -337,14 +317,12 @@ async def register(
         email=new_user.email,
         full_name=new_user.full_name,
         organization_id=new_user.organization_id,
-        message="User registered successfully. You can now login."
+        message="User registered successfully. You can now login.",
     )
 
 
 @router.get("/me", response_model=dict)
-async def get_current_user_info(
-    current_user: EnterpriseUser = Depends(get_current_user)
-):
+async def get_current_user_info(current_user: EnterpriseUser = Depends(get_current_user)):
     """
     Get current authenticated user information.
 
@@ -359,11 +337,7 @@ async def get_current_user_info(
     permissions = set()
 
     for role in current_user.roles:
-        roles.append({
-            "id": str(role.id),
-            "name": role.name,
-            "description": role.description
-        })
+        roles.append({"id": str(role.id), "name": role.name, "description": role.description})
         for permission in role.permissions:
             permissions.add(permission.name)
 
@@ -377,5 +351,5 @@ async def get_current_user_info(
         "is_verified": current_user.is_verified,
         "sso_provider": current_user.sso_provider,
         "roles": roles,
-        "permissions": sorted(list(permissions))
+        "permissions": sorted(list(permissions)),
     }
