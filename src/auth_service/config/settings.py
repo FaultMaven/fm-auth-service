@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     environment: str = "development"
 
     # Server configuration
-    host: str = "0.0.0.0"
+    host: str = "0.0.0.0"  # nosec B104 - Binding to all interfaces is required for Docker
     port: int = 8000
     debug: bool = False
 
