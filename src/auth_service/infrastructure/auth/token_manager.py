@@ -31,8 +31,7 @@ from typing import List, Optional
 
 from redis.asyncio import Redis
 
-from auth_service.domain.models import (AuthToken, DevUser, TokenStatus,
-                                        TokenValidationResult)
+from auth_service.domain.models import AuthToken, DevUser, TokenStatus, TokenValidationResult
 
 logger = logging.getLogger(__name__)
 

@@ -21,10 +21,16 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Header, HTTPException, Response
 from fastapi.security import HTTPBearer
 
-from auth_service.domain.models import (AuthTokenResponse, DevLoginRequest,
-                                        DevUser, LogoutResponse, TokenStatus,
-                                        UserInfoResponse, UserProfile,
-                                        to_json_compatible)
+from auth_service.domain.models import (
+    AuthTokenResponse,
+    DevLoginRequest,
+    DevUser,
+    LogoutResponse,
+    TokenStatus,
+    UserInfoResponse,
+    UserProfile,
+    to_json_compatible,
+)
 from auth_service.infrastructure.auth.token_manager import DevTokenManager
 from auth_service.infrastructure.auth.user_store import DevUserStore
 from auth_service.infrastructure.redis.client import get_redis_client

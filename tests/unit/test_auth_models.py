@@ -4,10 +4,14 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from auth_service.domain.models import (AuthToken, DevUser, TokenStatus,
-                                        TokenValidationResult,
-                                        parse_utc_timestamp,
-                                        to_json_compatible)
+from auth_service.domain.models import (
+    AuthToken,
+    DevUser,
+    TokenStatus,
+    TokenValidationResult,
+    parse_utc_timestamp,
+    to_json_compatible,
+)
 
 
 class TestDevUser:

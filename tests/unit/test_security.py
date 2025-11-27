@@ -9,8 +9,13 @@ import pytest
 from jose import JWTError, jwt
 
 from enterprise.config.settings import get_settings
-from enterprise.security import (create_access_token, create_refresh_token,
-                                 hash_password, verify_password, verify_token)
+from enterprise.security import (
+    create_access_token,
+    create_refresh_token,
+    hash_password,
+    verify_password,
+    verify_token,
+)
 
 settings = get_settings()
 

@@ -13,10 +13,8 @@ from fastapi.responses import JSONResponse
 
 from auth_service.api.routes import auth, service_auth
 from auth_service.config.settings import get_settings
-from auth_service.domain.services.service_token_manager import \
-    initialize_service_token_manager
-from auth_service.infrastructure.redis.client import (close_redis_client,
-                                                      get_redis_client)
+from auth_service.domain.services.service_token_manager import initialize_service_token_manager
+from auth_service.infrastructure.redis.client import close_redis_client, get_redis_client
 
 # Configure logging
 logging.basicConfig(

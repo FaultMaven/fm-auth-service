@@ -15,16 +15,13 @@ from uuid import UUID
 import pytest
 import pytest_asyncio
 from httpx import AsyncClient
-from sqlalchemy.ext.asyncio import (AsyncSession, async_sessionmaker,
-                                    create_async_engine)
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
 
 from enterprise.database import Base, get_db
 from enterprise.main import app
-from enterprise.models import (EnterpriseUser, Organization, Permission, Role,
-                               Team)
-from enterprise.security import (create_access_token, create_refresh_token,
-                                 hash_password)
+from enterprise.models import EnterpriseUser, Organization, Permission, Role, Team
+from enterprise.security import create_access_token, create_refresh_token, hash_password
 
 # Test database URL (use in-memory SQLite for tests)
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
