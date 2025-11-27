@@ -21,7 +21,7 @@ def parse_utc_timestamp(timestamp_str: str) -> datetime:
     """Parse UTC timestamp string to datetime object"""
     if isinstance(timestamp_str, datetime):
         return timestamp_str
-    return datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
+    return datetime.fromisoformat(timestamp_str.replace("Z", "+00:00"))
 
 
 def to_json_compatible(value):
@@ -33,6 +33,7 @@ def to_json_compatible(value):
 
 class TokenStatus(Enum):
     """Token validation status"""
+
     VALID = "valid"
     EXPIRED = "expired"
     INVALID = "invalid"
@@ -56,6 +57,7 @@ class DevUser:
         is_active: Account active status
         roles: List of user roles for access control (e.g., ['admin'], ['user'])
     """
+
     user_id: str
     username: str
     email: str
@@ -70,7 +72,7 @@ class DevUser:
         if self.roles is None:
             # Default: all dev users are admins for development
             # In production, this should default to ['user']
-            self.roles = ['admin']
+            self.roles = ["admin"]
 
     def to_dict(self) -> dict:
         """Convert to dictionary for JSON serialization"""
@@ -82,11 +84,11 @@ class DevUser:
             "created_at": to_json_compatible(self.created_at),
             "is_dev_user": self.is_dev_user,
             "is_active": self.is_active,
-            "roles": self.roles if self.roles else ['admin']
+            "roles": self.roles if self.roles else ["admin"],
         }
 
     @classmethod
-    def from_dict(cls, data: dict) -> 'DevUser':
+    def from_dict(cls, data: dict) -> "DevUser":
         """Create from dictionary (JSON deserialization)"""
         return cls(
             user_id=data["user_id"],
@@ -96,7 +98,7 @@ class DevUser:
             created_at=parse_utc_timestamp(data["created_at"]),
             is_dev_user=data.get("is_dev_user", True),
             is_active=data.get("is_active", True),
-            roles=data.get("roles", ['admin'])  # Default to admin for dev users
+            roles=data.get("roles", ["admin"]),  # Default to admin for dev users
         )
 
 
@@ -116,6 +118,7 @@ class AuthToken:
         last_used_at: Last usage timestamp (optional)
         is_revoked: Token revocation status
     """
+
     token_id: str
     user_id: str
     token_hash: str
@@ -133,11 +136,11 @@ class AuthToken:
             "expires_at": to_json_compatible(self.expires_at),
             "created_at": to_json_compatible(self.created_at),
             "last_used_at": to_json_compatible(self.last_used_at) if self.last_used_at else None,
-            "is_revoked": self.is_revoked
+            "is_revoked": self.is_revoked,
         }
 
     @classmethod
-    def from_dict(cls, data: dict) -> 'AuthToken':
+    def from_dict(cls, data: dict) -> "AuthToken":
         """Create from dictionary (JSON deserialization)"""
         return cls(
             token_id=data["token_id"],
@@ -145,8 +148,10 @@ class AuthToken:
             token_hash=data["token_hash"],
             expires_at=parse_utc_timestamp(data["expires_at"]),
             created_at=parse_utc_timestamp(data["created_at"]),
-            last_used_at=parse_utc_timestamp(data["last_used_at"]) if data.get("last_used_at") else None,
-            is_revoked=data.get("is_revoked", False)
+            last_used_at=(
+                parse_utc_timestamp(data["last_used_at"]) if data.get("last_used_at") else None
+            ),
+            is_revoked=data.get("is_revoked", False),
         )
 
     @property
@@ -172,6 +177,7 @@ class TokenValidationResult:
         user: Associated user if token is valid
         error_message: Error description if invalid
     """
+
     status: TokenStatus
     user: Optional[DevUser] = None
     error_message: Optional[str] = None

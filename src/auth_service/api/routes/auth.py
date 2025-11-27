@@ -29,7 +29,7 @@ from auth_service.domain.models import (
     UserInfoResponse,
     DevUser,
     TokenStatus,
-    to_json_compatible
+    to_json_compatible,
 )
 from auth_service.infrastructure.auth.token_manager import DevTokenManager
 from auth_service.infrastructure.auth.user_store import DevUserStore
@@ -76,7 +76,7 @@ async def extract_bearer_token(
 async def get_current_user_optional(
     token: Optional[str] = Depends(extract_bearer_token),
     token_manager: DevTokenManager = Depends(get_token_manager),
-    user_store: DevUserStore = Depends(get_user_store)
+    user_store: DevUserStore = Depends(get_user_store),
 ) -> Optional[DevUser]:
     """Get current user from token (optional - no error if missing/invalid)"""
     if not token:
@@ -99,7 +99,7 @@ async def get_current_user_optional(
 
 
 async def require_authentication(
-    user: Optional[DevUser] = Depends(get_current_user_optional)
+    user: Optional[DevUser] = Depends(get_current_user_optional),
 ) -> DevUser:
     """Require authenticated user (raises 401 if not authenticated)"""
     if not user:
@@ -108,7 +108,7 @@ async def require_authentication(
         raise HTTPException(
             status_code=401,
             detail="Authentication required. Please log in to access this resource.",
-            headers={"WWW-Authenticate": "Bearer"}
+            headers={"WWW-Authenticate": "Bearer"},
         )
 
     logger.debug(f"Authentication successful for user: {user.user_id}")
@@ -117,12 +117,13 @@ async def require_authentication(
 
 # Authentication endpoints
 
+
 @router.post("/dev-login", response_model=AuthTokenResponse, status_code=200)
 async def dev_login(
     request: DevLoginRequest,
     response: Response,
     user_store: DevUserStore = Depends(get_user_store),
-    token_manager: DevTokenManager = Depends(get_token_manager)
+    token_manager: DevTokenManager = Depends(get_token_manager),
 ) -> AuthTokenResponse:
     """Development login endpoint
 
@@ -137,22 +138,26 @@ async def dev_login(
         if user:
             logger.info(
                 f"User login: {request.username} (existing user: {user.user_id})",
-                extra={"user_id": user.user_id, "username": request.username, "correlation_id": correlation_id}
+                extra={
+                    "user_id": user.user_id,
+                    "username": request.username,
+                    "correlation_id": correlation_id,
+                },
             )
         else:
             # User doesn't exist - return authentication error
             logger.warning(
                 f"Login attempt for non-existent user: {request.username}",
-                extra={"username": request.username, "correlation_id": correlation_id}
+                extra={"username": request.username, "correlation_id": correlation_id},
             )
             raise HTTPException(
                 status_code=401,
                 detail={
                     "error": "authentication_failed",
                     "message": f"User '{request.username}' does not exist. Please check the username or register a new account.",
-                    "username": request.username
+                    "username": request.username,
                 },
-                headers={"WWW-Authenticate": "Bearer"}
+                headers={"WWW-Authenticate": "Bearer"},
             )
 
         # Generate authentication token
@@ -166,14 +171,14 @@ async def dev_login(
             display_name=user.display_name,
             created_at=to_json_compatible(user.created_at),
             is_dev_user=user.is_dev_user,
-            roles=user.roles if user.roles else ['admin']
+            roles=user.roles if user.roles else ["admin"],
         )
 
         token_response = AuthTokenResponse(
             access_token=access_token,
             token_type="bearer",
             expires_in=24 * 60 * 60,  # 24 hours in seconds
-            user=user_profile
+            user=user_profile,
         )
 
         # Set correlation ID in response headers
@@ -187,28 +192,24 @@ async def dev_login(
     except ValueError as e:
         logger.warning(
             f"Login validation error: {str(e)}",
-            extra={"username": request.username, "correlation_id": correlation_id}
+            extra={"username": request.username, "correlation_id": correlation_id},
         )
         raise HTTPException(
             status_code=400,
-            detail={
-                "error": "validation_error",
-                "message": str(e),
-                "username": request.username
-            }
+            detail={"error": "validation_error", "message": str(e), "username": request.username},
         )
     except Exception as e:
         logger.error(
             f"Dev login failed: {type(e).__name__}: {str(e)}",
             extra={"correlation_id": correlation_id},
-            exc_info=True
+            exc_info=True,
         )
         raise HTTPException(
             status_code=500,
             detail={
                 "error": "internal_error",
-                "message": "Login failed due to an internal error. Please try again later."
-            }
+                "message": "Login failed due to an internal error. Please try again later.",
+            },
         )
 
 
@@ -217,7 +218,7 @@ async def dev_register(
     request: DevLoginRequest,
     response: Response,
     user_store: DevUserStore = Depends(get_user_store),
-    token_manager: DevTokenManager = Depends(get_token_manager)
+    token_manager: DevTokenManager = Depends(get_token_manager),
 ) -> AuthTokenResponse:
     """Development registration endpoint
 
@@ -232,14 +233,12 @@ async def dev_register(
             logger.warning(f"Registration attempt for existing user: {request.username}")
             raise HTTPException(
                 status_code=409,
-                detail=f"User with username '{request.username}' already exists. Please use login instead."
+                detail=f"User with username '{request.username}' already exists. Please use login instead.",
             )
 
         # Create new user
         user = await user_store.create_user(
-            username=request.username,
-            email=request.email,
-            display_name=request.display_name
+            username=request.username, email=request.email, display_name=request.display_name
         )
         logger.info(f"User registration: {request.username} (new user: {user.user_id})")
 
@@ -254,20 +253,22 @@ async def dev_register(
             display_name=user.display_name,
             created_at=to_json_compatible(user.created_at),
             is_dev_user=user.is_dev_user,
-            roles=user.roles if user.roles else ['admin']
+            roles=user.roles if user.roles else ["admin"],
         )
 
         token_response = AuthTokenResponse(
             access_token=access_token,
             token_type="bearer",
             expires_in=24 * 60 * 60,  # 24 hours in seconds
-            user=user_profile
+            user=user_profile,
         )
 
         # Set correlation ID in response headers
         response.headers["X-Correlation-Id"] = correlation_id
 
-        logger.info(f"Registration successful for user {user.user_id} (correlation: {correlation_id})")
+        logger.info(
+            f"Registration successful for user {user.user_id} (correlation: {correlation_id})"
+        )
         return token_response
 
     except HTTPException:
@@ -275,28 +276,24 @@ async def dev_register(
     except ValueError as e:
         logger.warning(
             f"Registration validation error: {str(e)}",
-            extra={"username": request.username, "correlation_id": correlation_id}
+            extra={"username": request.username, "correlation_id": correlation_id},
         )
         raise HTTPException(
             status_code=400,
-            detail={
-                "error": "validation_error",
-                "message": str(e),
-                "username": request.username
-            }
+            detail={"error": "validation_error", "message": str(e), "username": request.username},
         )
     except Exception as e:
         logger.error(
             f"Dev registration failed: {type(e).__name__}: {str(e)}",
             extra={"correlation_id": correlation_id},
-            exc_info=True
+            exc_info=True,
         )
         raise HTTPException(
             status_code=500,
             detail={
                 "error": "internal_error",
-                "message": "Registration failed due to an internal error. Please try again later."
-            }
+                "message": "Registration failed due to an internal error. Please try again later.",
+            },
         )
 
 
@@ -304,7 +301,7 @@ async def dev_register(
 async def logout(
     current_user: DevUser = Depends(require_authentication),
     token: str = Depends(extract_bearer_token),
-    token_manager: DevTokenManager = Depends(get_token_manager)
+    token_manager: DevTokenManager = Depends(get_token_manager),
 ) -> LogoutResponse:
     """Logout current user
 
@@ -318,31 +315,22 @@ async def logout(
 
         if success:
             logger.info(f"User logout: {current_user.user_id} (correlation: {correlation_id})")
-            return LogoutResponse(
-                message="Logged out successfully",
-                revoked_tokens=1
-            )
+            return LogoutResponse(message="Logged out successfully", revoked_tokens=1)
         else:
             logger.warning(f"Token revocation failed for user {current_user.user_id}")
-            raise HTTPException(
-                status_code=500,
-                detail="Logout failed: Could not revoke token"
-            )
+            raise HTTPException(status_code=500, detail="Logout failed: Could not revoke token")
 
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Logout failed: {e} (correlation: {correlation_id})")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Logout failed: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Logout failed: {str(e)}")
 
 
 @router.get("/me", response_model=UserInfoResponse)
 async def get_current_user_profile(
     current_user: DevUser = Depends(require_authentication),
-    token_manager: DevTokenManager = Depends(get_token_manager)
+    token_manager: DevTokenManager = Depends(get_token_manager),
 ) -> UserInfoResponse:
     """Get current user profile
 
@@ -363,22 +351,21 @@ async def get_current_user_profile(
             display_name=current_user.display_name,
             created_at=to_json_compatible(current_user.created_at),
             is_dev_user=current_user.is_dev_user,
-            roles=current_user.roles if current_user.roles else ['admin'],
+            roles=current_user.roles if current_user.roles else ["admin"],
             last_login=None,  # TODO: Implement last login tracking
-            token_count=active_token_count
+            token_count=active_token_count,
         )
 
-        logger.debug(f"User profile requested: {current_user.user_id} (correlation: {correlation_id})")
+        logger.debug(
+            f"User profile requested: {current_user.user_id} (correlation: {correlation_id})"
+        )
         return user_info
 
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Get user profile failed: {e} (correlation: {correlation_id})")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Could not retrieve user profile: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Could not retrieve user profile: {str(e)}")
 
 
 @router.get("/health")
@@ -397,8 +384,8 @@ async def auth_health_check():
             "services": {
                 "redis": "healthy" if redis_healthy else "unhealthy",
                 "token_manager": "available",
-                "user_store": "available"
-            }
+                "user_store": "available",
+            },
         }
 
         return health_status
@@ -408,7 +395,7 @@ async def auth_health_check():
         return {
             "status": "unhealthy",
             "timestamp": to_json_compatible(datetime.now(timezone.utc)),
-            "error": str(e)
+            "error": str(e),
         }
 
 
@@ -416,7 +403,7 @@ async def auth_health_check():
 @router.post("/dev/revoke-all-tokens", response_model=LogoutResponse)
 async def dev_revoke_all_user_tokens(
     current_user: DevUser = Depends(require_authentication),
-    token_manager: DevTokenManager = Depends(get_token_manager)
+    token_manager: DevTokenManager = Depends(get_token_manager),
 ) -> LogoutResponse:
     """Development endpoint: Revoke all tokens for current user
 
@@ -428,16 +415,14 @@ async def dev_revoke_all_user_tokens(
         # Revoke all user tokens
         revoked_count = await token_manager.revoke_user_tokens(current_user.user_id)
 
-        logger.info(f"Dev: Revoked all tokens for user {current_user.user_id}, count: {revoked_count} (correlation: {correlation_id})")
+        logger.info(
+            f"Dev: Revoked all tokens for user {current_user.user_id}, count: {revoked_count} (correlation: {correlation_id})"
+        )
 
         return LogoutResponse(
-            message=f"Revoked all {revoked_count} tokens for user",
-            revoked_tokens=revoked_count
+            message=f"Revoked all {revoked_count} tokens for user", revoked_tokens=revoked_count
         )
 
     except Exception as e:
         logger.error(f"Dev token revocation failed: {e} (correlation: {correlation_id})")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Token revocation failed: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Token revocation failed: {str(e)}")

@@ -6,7 +6,7 @@ from auth_service.domain.models.auth import (
     TokenStatus,
     TokenValidationResult,
     parse_utc_timestamp,
-    to_json_compatible
+    to_json_compatible,
 )
 from auth_service.domain.models.api_auth import (
     DevLoginRequest,
@@ -16,7 +16,7 @@ from auth_service.domain.models.api_auth import (
     AuthError,
     TokenValidationError,
     AuthenticationRequiredError,
-    UserInfoResponse
+    UserInfoResponse,
 )
 
 __all__ = [

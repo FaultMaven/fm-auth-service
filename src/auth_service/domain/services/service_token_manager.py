@@ -55,9 +55,7 @@ class ServiceTokenManager:
             )
         except Exception as e:
             logger.error(f"Failed to load permissions config: {e}")
-            raise ValueError(
-                f"Cannot load permissions from {permissions_config_path}: {e}"
-            )
+            raise ValueError(f"Cannot load permissions from {permissions_config_path}: {e}")
 
     def create_service_token(
         self, service_id: str, audience: List[str], ttl_seconds: int = None
@@ -77,9 +75,7 @@ class ServiceTokenManager:
         """
         # Validate service ID
         if service_id not in self.permissions_map:
-            raise ValueError(
-                f"Service '{service_id}' not found in permissions configuration"
-            )
+            raise ValueError(f"Service '{service_id}' not found in permissions configuration")
 
         # Get permissions for this service
         permissions = self.permissions_map[service_id]
@@ -158,7 +154,6 @@ def get_service_token_manager() -> ServiceTokenManager:
     """
     if _service_token_manager is None:
         raise RuntimeError(
-            "ServiceTokenManager not initialized. "
-            "Call initialize_service_token_manager() first."
+            "ServiceTokenManager not initialized. " "Call initialize_service_token_manager() first."
         )
     return _service_token_manager

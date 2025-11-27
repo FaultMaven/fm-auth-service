@@ -18,8 +18,7 @@ from auth_service.domain.services.service_token_manager import initialize_servic
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -68,7 +67,7 @@ app = FastAPI(
     title="FaultMaven Auth Service",
     version=settings.service_version,
     description="Authentication and user management service extracted from FaultMaven monolith",
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
 # CORS configuration
@@ -89,7 +88,7 @@ async def root_health_check():
         "status": "healthy",
         "service": settings.service_name,
         "version": settings.service_version,
-        "environment": settings.environment
+        "environment": settings.environment,
     }
 
 
@@ -101,7 +100,7 @@ async def root():
         "version": settings.service_version,
         "description": "FaultMaven Authentication Service",
         "docs": "/docs",
-        "health": "/health"
+        "health": "/health",
     }
 
 
@@ -119,17 +118,18 @@ async def global_exception_handler(request, exc):
         status_code=500,
         content={
             "error": "internal_server_error",
-            "message": "An unexpected error occurred. Please try again later."
-        }
+            "message": "An unexpected error occurred. Please try again later.",
+        },
     )
 
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(
         "auth_service.main:app",
         host=settings.host,
         port=settings.port,
         reload=settings.debug,
-        log_level=settings.log_level.lower()
+        log_level=settings.log_level.lower(),
     )

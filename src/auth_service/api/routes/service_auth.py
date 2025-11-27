@@ -25,9 +25,7 @@ class ServiceTokenRequest(BaseModel):
     """Request body for service token creation."""
 
     service_id: str = Field(..., description="Service identifier (e.g., fm-agent-service)")
-    audience: List[str] = Field(
-        ..., description="List of services this token can access"
-    )
+    audience: List[str] = Field(..., description="List of services this token can access")
     ttl_seconds: int = Field(
         default=3600,
         ge=60,
@@ -109,9 +107,7 @@ async def create_service_token(request: ServiceTokenRequest):
 
     except ValueError as e:
         logger.warning(f"Invalid service token request: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except Exception as e:
         logger.error(f"Failed to create service token: {e}", exc_info=True)
         raise HTTPException(
