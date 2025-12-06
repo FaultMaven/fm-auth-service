@@ -1,6 +1,12 @@
 # FaultMaven Auth Service
 
+> **Part of [FaultMaven](https://github.com/FaultMaven/faultmaven)** —
+> The AI-Powered Troubleshooting Copilot
+
 Authentication and user management microservice extracted from the FaultMaven monolith (Phase 1, Days 8-9).
+
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+[![Docker](https://img.shields.io/badge/docker-ready-blue.svg)](https://hub.docker.com/r/faultmaven/fm-auth-service)
 
 ## Overview
 
@@ -207,8 +213,20 @@ poetry run alembic downgrade -1
 
 ## Contributing
 
-This is part of the FaultMaven enterprise microservices migration. See the main repository's `ENTERPRISE_MICROSERVICES_MIGRATION_PLAN.md` for the overall strategy.
+See our [Contributing Guide](https://github.com/FaultMaven/.github/blob/main/CONTRIBUTING.md) for detailed guidelines.
+
+## Support
+
+- **Discussions:** [GitHub Discussions](https://github.com/FaultMaven/faultmaven/discussions)
+- **Issues:** [GitHub Issues](https://github.com/FaultMaven/fm-auth-service/issues)
+
+## Related Projects
+
+- **[faultmaven](https://github.com/FaultMaven/faultmaven)** - Main repository and documentation
+- **[faultmaven-deploy](https://github.com/FaultMaven/faultmaven-deploy)** - Deployment configurations
+- **[fm-api-gateway](https://github.com/FaultMaven/fm-api-gateway)** - API Gateway service
+- **[fm-session-service](https://github.com/FaultMaven/fm-session-service)** - Session management service
 
 ## License
 
-Copyright FaultMaven Team. Internal use only.
+Apache 2.0 - See [LICENSE](LICENSE) for details.
