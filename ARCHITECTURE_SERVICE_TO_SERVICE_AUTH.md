@@ -1,8 +1,16 @@
 # Service-to-Service Authentication Design
 
+> **⚠️ DEPRECATED**: This authentication system was removed on 2025-12-07
+>
+> **Reason**: The implementation was broken (services never received JWT tokens) and added unnecessary complexity. All services now trust X-User-* headers from the API Gateway, which already validates user JWTs and sanitizes incoming headers to prevent injection attacks.
+>
+> **Current Architecture**: See [API Gateway Authentication](../fm-api-gateway/README.md) for the simplified authentication model.
+
+---
+
 ## Overview
 
-This document describes the JWT-based service-to-service authentication system implemented for FaultMaven microservices to resolve 401 Unauthorized errors when services communicate with each other.
+This document describes the JWT-based service-to-service authentication system that was previously implemented for FaultMaven microservices to resolve 401 Unauthorized errors when services communicate with each other.
 
 ## Problem Statement
 
