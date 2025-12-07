@@ -11,9 +11,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from auth_service.api.routes import auth, service_auth
+from auth_service.api.routes import auth
 from auth_service.config.settings import get_settings
-from auth_service.domain.services.service_token_manager import initialize_service_token_manager
 from auth_service.infrastructure.redis.client import close_redis_client, get_redis_client
 
 # Configure logging
@@ -39,19 +38,6 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error(f"Failed to connect to Redis: {e}")
         raise
-
-    # Initialize Service Token Manager
-    try:
-        initialize_service_token_manager(
-            private_key_path=settings.service_private_key_path,
-            permissions_config_path=settings.service_permissions_config_path,
-            token_issuer=settings.service_token_issuer,
-            default_ttl_seconds=settings.service_token_ttl_seconds,
-        )
-        logger.info("Service token manager initialized")
-    except Exception as e:
-        logger.warning(f"Failed to initialize service token manager: {e}")
-        logger.warning("Service-to-service authentication will not be available")
 
     yield
 
@@ -106,7 +92,7 @@ async def root():
 
 # Include routers (auth.router already has /api/v1/auth prefix)
 app.include_router(auth.router, tags=["authentication"])
-app.include_router(service_auth.router, tags=["service-authentication"])
+# Service-to-service authentication removed - services now trust X-User-* headers from API Gateway
 
 
 # Global exception handler
