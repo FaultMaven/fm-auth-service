@@ -1,13 +1,14 @@
 """Redis Client for Auth Service
 
 Provides async Redis client management for token blacklisting,
-user storage, and caching operations.
+user storage, and caching operations with Sentinel support for HA.
 """
 
 import logging
 from typing import Optional
 
 import redis.asyncio as redis
+from fm_core_lib.infrastructure import get_redis_client as get_redis_from_factory
 
 from auth_service.config.settings import get_settings
 
@@ -15,23 +16,59 @@ logger = logging.getLogger(__name__)
 
 
 class RedisClient:
-    """Async Redis client wrapper"""
+    """Async Redis client wrapper with Sentinel support"""
 
-    def __init__(self, url: Optional[str] = None):
+    def __init__(self):
         """Initialize Redis client
 
-        Args:
-            url: Redis connection URL (optional, uses settings if not provided)
+        Uses fm-core-lib factory for deployment-neutral configuration.
         """
-        settings = get_settings()
-        self.url = url or settings.redis_url
         self._client: Optional[redis.Redis] = None
 
     async def connect(self):
-        """Establish Redis connection"""
+        """Establish Redis connection with Sentinel support.
+
+        Uses fm-core-lib factory for deployment-neutral Redis configuration:
+        - Standalone mode (development, self-hosted)
+        - Sentinel mode (enterprise K8s with HA)
+
+        Environment Variables:
+            REDIS_MODE: "standalone" (default) or "sentinel"
+
+            For standalone:
+                REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD
+
+            For sentinel:
+                REDIS_SENTINEL_HOSTS: Comma-separated "host:port,host:port"
+                REDIS_MASTER_SET: Master set name (default: "mymaster")
+                REDIS_DB, REDIS_PASSWORD
+        """
         if not self._client:
-            self._client = await redis.from_url(self.url, encoding="utf-8", decode_responses=True)
-            logger.info(f"Connected to Redis at {self.url}")
+            settings = get_settings()
+
+            self._client = await get_redis_from_factory(
+                mode=settings.redis_mode,
+                host=settings.redis_host,
+                port=settings.redis_port,
+                db=settings.redis_db,
+                password=settings.redis_password,
+                sentinel_hosts=settings.redis_sentinel_hosts,
+                master_set=settings.redis_master_set,
+            )
+
+            if settings.redis_mode == "sentinel":
+                logger.info(
+                    f"Connected to Redis (SENTINEL): "
+                    f"master_set={settings.redis_master_set}, "
+                    f"sentinels={settings.redis_sentinel_hosts}, "
+                    f"db={settings.redis_db}"
+                )
+            else:
+                logger.info(
+                    f"Connected to Redis (STANDALONE): "
+                    f"{settings.redis_host}:{settings.redis_port}/{settings.redis_db}"
+                )
+
 
     async def disconnect(self):
         """Close Redis connection"""

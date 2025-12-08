@@ -28,6 +28,11 @@ class Settings(BaseSettings):
     redis_db: int = 0
     redis_password: Optional[str] = None
 
+    # Redis Sentinel configuration (for HA deployments)
+    redis_mode: str = "standalone"  # "standalone" or "sentinel"
+    redis_sentinel_hosts: Optional[str] = None  # Comma-separated "host:port,host:port"
+    redis_master_set: str = "mymaster"  # Sentinel master set name
+
     @property
     def redis_url(self) -> str:
         """Construct Redis URL from components"""
