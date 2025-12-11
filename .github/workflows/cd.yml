@@ -5,6 +5,12 @@ on:
     branches: [main]
     tags:
       - 'v*.*.*'
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'LICENSE'
+      - '.gitignore'
+      - '.dockerignore'
 
 env:
   PYTHON_VERSION: '3.11'
