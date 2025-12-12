@@ -3,6 +3,7 @@ name = "fm-auth-service"
 version = "1.0.0"
 description = "FaultMaven Authentication and User Management Microservice - Phase 1 Extraction"
 authors = ["FaultMaven Team"]
+packages = [{include = "auth_service", from = "src"}]
 
 [tool.poetry.dependencies]
 python = "^3.11"
