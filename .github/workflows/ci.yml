@@ -45,7 +45,8 @@ jobs:
       - name: Build image (no push)
         uses: docker/build-push-action@v5
         with:
-          context: .
+          context: ..
+          file: fm-auth-service/Dockerfile
           push: false
           tags: ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
           outputs: type=docker,dest=/tmp/image.tar
