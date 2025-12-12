@@ -9,11 +9,11 @@ WORKDIR /app
 # Install poetry
 RUN pip install --no-cache-dir poetry==1.7.0
 
-# Copy fm-core-lib first (required dependency)
+# Copy fm-core-lib (sibling repo is checked out by CI)
 COPY fm-core-lib/ ./fm-core-lib/
 
 # Copy dependency files
-COPY fm-auth-service/pyproject.toml ./
+COPY pyproject.toml ./
 
 # Export dependencies to requirements.txt (no dev dependencies)
 RUN poetry export -f requirements.txt --output requirements.txt --without-hashes --without dev || \
@@ -33,7 +33,7 @@ COPY --from=builder /app/fm-core-lib/ ./fm-core-lib/
 RUN pip install --no-cache-dir ./fm-core-lib
 
 # Copy source code
-COPY fm-auth-service/src/ ./src/
+COPY src/ ./src/
 
 # Create data directory for SQLite database
 RUN mkdir -p /data && chmod 777 /data
