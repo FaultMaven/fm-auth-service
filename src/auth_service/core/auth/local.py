@@ -5,6 +5,7 @@ Uses existing JWT manager and user store infrastructure.
 """
 
 import logging
+import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Set
 import asyncio
@@ -305,6 +306,7 @@ class LocalAuthProvider(AuthProvider):
             "type": "access",
             "iat": now,
             "exp": expire,
+            "jti": str(uuid.uuid4()),  # Unique token ID
         }
 
         return jwt.encode(payload, self.secret_key, algorithm=self.algorithm)
@@ -326,6 +328,7 @@ class LocalAuthProvider(AuthProvider):
             "type": "refresh",
             "iat": now,
             "exp": expire,
+            "jti": str(uuid.uuid4()),  # Unique token ID for rotation
         }
 
         return jwt.encode(payload, self.secret_key, algorithm=self.algorithm)

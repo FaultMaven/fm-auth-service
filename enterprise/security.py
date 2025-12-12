@@ -4,6 +4,7 @@ Security utilities for enterprise authentication.
 Provides password hashing and verification using bcrypt, and JWT token generation.
 """
 
+import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 from uuid import UUID
@@ -77,6 +78,7 @@ def create_access_token(
         "exp": expire,  # Expiration time
         "iat": now,  # Issued at
         "type": "access",
+        "jti": str(uuid.uuid4()),  # Unique token ID
     }
 
     encoded_jwt = jwt.encode(to_encode, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
@@ -103,7 +105,13 @@ def create_refresh_token(user_id: UUID, expires_delta: Optional[timedelta] = Non
     else:
         expire = now + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
 
-    to_encode = {"sub": str(user_id), "exp": expire, "iat": now, "type": "refresh"}
+    to_encode = {
+        "sub": str(user_id),
+        "exp": expire,
+        "iat": now,
+        "type": "refresh",
+        "jti": str(uuid.uuid4()),  # Unique token ID for rotation
+    }
 
     encoded_jwt = jwt.encode(to_encode, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
     return encoded_jwt
