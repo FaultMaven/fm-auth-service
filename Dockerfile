@@ -9,7 +9,7 @@ WORKDIR /app
 # Install poetry
 RUN pip install --no-cache-dir poetry==1.7.0
 
-# Copy fm-core-lib (sibling repo is checked out by CI)
+# Copy fm-core-lib (checked out by CI in parent)
 COPY fm-core-lib/ ./fm-core-lib/
 
 # Copy dependency files
