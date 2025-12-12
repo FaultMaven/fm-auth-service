@@ -6,7 +6,7 @@ authors = ["FaultMaven Team"]
 
 [tool.poetry.dependencies]
 python = "^3.11"
-fm-core-lib = {path = "../fm-core-lib", develop = true}
+fm-core-lib = {path = "fm-core-lib", develop = true}
 fastapi = "^0.104.0"
 uvicorn = {extras = ["standard"], version = "^0.24.0"}
 pydantic = {extras = ["email"], version = "^2.4.0"}
