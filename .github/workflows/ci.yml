@@ -76,6 +76,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Checkout fm-core-lib
+        uses: actions/checkout@v4
+        with:
+          repository: FaultMaven/fm-core-lib
+          path: fm-core-lib
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
