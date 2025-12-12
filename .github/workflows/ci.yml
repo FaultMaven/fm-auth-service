@@ -104,7 +104,7 @@ jobs:
 
       - name: Run tests
         run: |
-          pytest --maxfail=1 --disable-warnings -q || true
+          pytest --maxfail=1 --disable-warnings -q
 
   smoke:
     name: Smoke test
