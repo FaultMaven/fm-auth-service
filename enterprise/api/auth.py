@@ -333,10 +333,12 @@ async def get_current_user_info(current_user: EnterpriseUser = Depends(get_curre
         User information including roles and permissions
     """
     # Collect user roles
+    # Note: current_user.roles is a list of UserRole junction objects, not Role objects
     roles = []
     permissions = set()
 
-    for role in current_user.roles:
+    for user_role in current_user.roles:
+        role = user_role.role
         roles.append({"id": str(role.id), "name": role.name, "description": role.description})
         for permission in role.permissions:
             permissions.add(permission.name)
