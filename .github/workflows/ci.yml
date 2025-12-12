@@ -117,9 +117,6 @@ jobs:
           docker run -d --rm --name smoke-${{ github.sha }} --network smoke-net -p 8001:8001 \
             ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
 
-          # Intentionally fail once for gate verification
-          exit 1
-
           for i in {1..30}; do
             if curl -sf http://localhost:8001/health; then
               echo "✓ Health check passed"
