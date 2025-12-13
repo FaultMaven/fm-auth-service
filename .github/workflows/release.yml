@@ -1,9 +1,23 @@
-name: Release
+name: Release (LEGACY - MANUAL ONLY)
+
+# DEPRECATED: Do not use for routine releases.
+# This workflow bypasses the hardened CI/CD pipeline in ci.yml.
+# Use ci.yml which gates all registry pushes on unit tests + smoke tests.
+#
+# This workflow is kept for emergency scenarios only.
+# Trigger manually via workflow_dispatch if needed.
 
 on:
-  push:
-    tags:
-      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (e.g., 1.2.3)'
+        required: true
+        type: string
+      reason:
+        description: 'Reason for manual release (required)'
+        required: true
+        type: string
 
 jobs:
   create-release:

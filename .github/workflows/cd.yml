@@ -1,10 +1,19 @@
-name: CD - Deploy
+name: CD - Deploy (LEGACY - MANUAL ONLY)
+
+# DEPRECATED: Do not use for routine releases.
+# This workflow bypasses the hardened CI/CD pipeline in ci.yml.
+# Use ci.yml which gates all pushes on unit tests + smoke tests.
+#
+# This workflow is kept for emergency rollback scenarios only.
+# Trigger manually via workflow_dispatch if needed.
 
 on:
-  push:
-    branches: [main]
-    tags:
-      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Reason for manual deployment (required)'
+        required: true
+        type: string
 
 env:
   PYTHON_VERSION: '3.11'
