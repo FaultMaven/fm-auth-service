@@ -9,7 +9,7 @@ WORKDIR /app
 # Install poetry
 RUN pip install --no-cache-dir poetry==1.7.0
 
-# Copy fm-core-lib (checked out by CI in parent)
+# Copy fm-core-lib first (required dependency)
 COPY fm-core-lib/ ./fm-core-lib/
 
 # Copy dependency files
@@ -24,12 +24,13 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Bring in fm-core-lib first so requirements with local path resolve
-COPY --from=builder /app/fm-core-lib/ ./fm-core-lib/
-
 # Install runtime dependencies
 COPY --from=builder /app/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+
+# Install fm-core-lib
+COPY --from=builder /app/fm-core-lib/ ./fm-core-lib/
+RUN pip install --no-cache-dir ./fm-core-lib
 
 # Copy source code
 COPY src/ ./src/

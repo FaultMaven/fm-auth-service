@@ -251,3 +251,72 @@ class TestTokenVerification:
         """Test token verification with empty token."""
         with pytest.raises(JWTError):
             verify_token("", token_type="access")
+
+
+class TestTokenUniqueness:
+    """Regression tests for token uniqueness (jti claim)."""
+
+    def test_access_token_includes_jti_claim(self):
+        """Regression test: Access tokens include jti claim for uniqueness.
+
+        Bug #673a0b5: Tokens with identical payloads (created within same second)
+        produced identical JWT strings, breaking refresh token rotation.
+
+        Fix: Added 'jti' (JWT ID) claim using uuid4 to ensure uniqueness.
+        """
+        user_id = uuid4()
+        org_id = uuid4()
+        email = "test@example.com"
+
+        # Create two access tokens with identical parameters
+        token1 = create_access_token(user_id=user_id, organization_id=org_id, email=email)
+        token2 = create_access_token(user_id=user_id, organization_id=org_id, email=email)
+
+        # Tokens must be different despite same user/email
+        assert token1 != token2, "Access tokens with same payload should differ due to jti claim"
+
+        # Decode to verify jti
+        payload1 = jwt.decode(token1, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
+        payload2 = jwt.decode(token2, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
+
+        assert "jti" in payload1, "Access token missing jti claim"
+        assert "jti" in payload2, "Access token missing jti claim"
+        assert payload1["jti"] != payload2["jti"], "Access tokens have identical jti claims"
+
+    def test_refresh_token_includes_jti_claim(self):
+        """Regression test: Refresh tokens include jti claim for rotation.
+
+        This ensures refresh token rotation works correctly - each refresh
+        operation returns a NEW token with a different jti.
+        """
+        user_id = uuid4()
+
+        # Create two refresh tokens for same user
+        token1 = create_refresh_token(user_id=user_id)
+        token2 = create_refresh_token(user_id=user_id)
+
+        # Tokens must be different
+        assert token1 != token2, "Refresh tokens with same user should differ due to jti claim"
+
+        # Decode to verify jti
+        payload1 = jwt.decode(token1, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
+        payload2 = jwt.decode(token2, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
+
+        assert "jti" in payload1, "Refresh token missing jti claim"
+        assert "jti" in payload2, "Refresh token missing jti claim"
+        assert payload1["jti"] != payload2["jti"], "Refresh tokens have identical jti claims"
+
+    def test_jti_is_uuid_format(self):
+        """Verify that jti claim uses UUID format."""
+        from uuid import UUID
+
+        user_id = uuid4()
+        token = create_access_token(user_id=user_id, organization_id=uuid4(), email="test@example.com")
+
+        payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
+
+        # Should be able to parse jti as UUID
+        try:
+            UUID(payload["jti"])
+        except (ValueError, KeyError):
+            pytest.fail("jti claim should be a valid UUID string")

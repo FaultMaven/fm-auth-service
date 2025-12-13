@@ -205,7 +205,7 @@ class LocalAuthProvider(AuthProvider):
             # Fetch user to get current roles
             redis_client = await get_redis_client()
             user_store = DevUserStore(redis_client.get_client())
-            user = await user_store.get_user_by_id(user_id)
+            user = await user_store.get_user(user_id)
 
             if not user or not user.is_active:
                 raise AuthenticationError("User not found or inactive")
@@ -257,7 +257,7 @@ class LocalAuthProvider(AuthProvider):
             # Fetch user
             redis_client = await get_redis_client()
             user_store = DevUserStore(redis_client.get_client())
-            user = await user_store.get_user_by_id(user_id)
+            user = await user_store.get_user(user_id)
 
             if not user or not user.is_active:
                 raise AuthenticationError("User not found or inactive")

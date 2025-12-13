@@ -351,3 +351,105 @@ class TestGetCurrentUserEndpoint:
         # Member should NOT have create permissions
         assert "teams:create" not in data["permissions"]
         assert "users:create" not in data["permissions"]
+
+
+class TestRegressionBugs:
+    """Regression tests for specific bugs that were fixed."""
+
+    @pytest.mark.asyncio
+    @pytest.mark.integration
+    async def test_refresh_token_rotation_returns_new_token(
+        self, client: AsyncClient, test_user_admin: EnterpriseUser
+    ):
+        """Regression test for bug #673a0b5: Refresh must return NEW token.
+
+        Bug: Refresh endpoint returned same token because tokens with identical
+        payloads (created within same second) produced identical JWT strings.
+
+        Fix: Added 'jti' (JWT ID) claim using uuid4 to ensure uniqueness.
+
+        This test verifies that:
+        1. Refresh returns a different token than the input
+        2. Both tokens have different 'jti' claims
+        """
+        # Login to get initial tokens
+        login_response = await client.post(
+            "/api/v1/enterprise/auth/login",
+            json={"email": "admin@testorg.com", "password": "admin123"},
+        )
+        assert login_response.status_code == 200
+        refresh_token_1 = login_response.json()["refresh_token"]
+
+        # Refresh the token
+        refresh_response = await client.post(
+            "/api/v1/enterprise/auth/refresh", json={"refresh_token": refresh_token_1}
+        )
+        assert refresh_response.status_code == 200
+        refresh_token_2 = refresh_response.json()["refresh_token"]
+
+        # CRITICAL: New refresh token must be different due to unique jti claim
+        assert refresh_token_2 != refresh_token_1, (
+            "Refresh token rotation failed: new token matches old token. "
+            "This indicates the jti claim is not unique or missing."
+        )
+
+        # Decode both tokens to verify jti differs
+        from jose import jwt
+        from enterprise.config.settings import get_settings
+
+        settings = get_settings()
+        payload_1 = jwt.decode(refresh_token_1, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
+        payload_2 = jwt.decode(refresh_token_2, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
+
+        assert "jti" in payload_1, "Original refresh token missing jti claim"
+        assert "jti" in payload_2, "New refresh token missing jti claim"
+        assert payload_1["jti"] != payload_2["jti"], (
+            "Refresh tokens have identical jti claims, rotation will fail"
+        )
+
+    @pytest.mark.asyncio
+    @pytest.mark.integration
+    async def test_get_me_serializes_user_role_to_role(
+        self, client: AsyncClient, admin_access_token: str, test_user_admin: EnterpriseUser
+    ):
+        """Regression test for bug #52e7e60: /auth/me must traverse UserRole→Role.
+
+        Bug: get_current_user_info endpoint treated current_user.roles as Role objects,
+        but they're actually UserRole junction objects. Caused AttributeError when
+        accessing role.name and role.description.
+
+        Fix: Iterate over UserRole objects and access related Role via user_role.role:
+            for user_role in current_user.roles:
+                role = user_role.role
+                roles.append({"id": role.id, "name": role.name, ...})
+
+        This test verifies that:
+        1. /auth/me returns roles array with proper structure
+        2. Each role has id, name, description fields
+        3. No AttributeError occurs during serialization
+        """
+        response = await client.get(
+            "/api/v1/enterprise/auth/me", headers={"Authorization": f"Bearer {admin_access_token}"}
+        )
+
+        assert response.status_code == 200, (
+            f"Failed to get current user info: {response.status_code} {response.text}"
+        )
+        data = response.json()
+
+        # CRITICAL: Must have roles array with proper structure
+        assert "roles" in data, "Response missing 'roles' field"
+        assert isinstance(data["roles"], list), "Roles must be a list"
+        assert len(data["roles"]) > 0, "Admin user should have at least one role"
+
+        # Each role must have id, name, description (from Role model, not UserRole)
+        for role in data["roles"]:
+            assert "id" in role, f"Role missing 'id' field: {role}"
+            assert "name" in role, f"Role missing 'name' field: {role}"
+            assert "description" in role, f"Role missing 'description' field: {role}"
+            assert isinstance(role["name"], str), "Role name must be a string"
+            assert isinstance(role["description"], str), "Role description must be a string"
+
+        # Verify permissions are also included (another field from the same endpoint)
+        assert "permissions" in data, "Response missing 'permissions' field"
+        assert isinstance(data["permissions"], list), "Permissions must be a list"
