@@ -32,14 +32,6 @@ services:
       - "case:read"
       - "case:write"
 
-  # Investigation Service - needs broad access
-  fm-investigation-service:
-    permissions:
-      - "case:read"
-      - "case:write"
-      - "knowledge:read"
-      - "evidence:read"
-
   # API Gateway - needs access to all services
   fm-api-gateway:
     permissions:
